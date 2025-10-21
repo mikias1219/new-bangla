@@ -4,7 +4,6 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
 
@@ -44,7 +43,7 @@ def authenticate_user(db: Session, username: str, password: str):
         return False
     return user
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(SessionLocal)):
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     print(f"DEBUG: Received credentials: {credentials}")
     print(f"DEBUG: Credentials scheme: {credentials.scheme}")
     print(f"DEBUG: Credentials token: {credentials.credentials[:20]}...")
@@ -70,14 +69,19 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         print(f"DEBUG: JWT decode error: {e}")
         raise credentials_exception
 
-    print(f"DEBUG: Looking for user: {username}")
-    user = db.query(User).filter(User.username == username).first()
-    if user is None:
-        print(f"DEBUG: User not found: {username}")
-        raise credentials_exception
+    # Create database session
+    db = SessionLocal()
+    try:
+        print(f"DEBUG: Looking for user: {username}")
+        user = db.query(User).filter(User.username == username).first()
+        if user is None:
+            print(f"DEBUG: User not found: {username}")
+            raise credentials_exception
 
-    print(f"DEBUG: User found: {user.username}")
-    return user
+        print(f"DEBUG: User found: {user.username}")
+        return user
+    finally:
+        db.close()
 
 class JWTBearer(HTTPBearer):
     def __init__(self, auto_error: bool = True):
