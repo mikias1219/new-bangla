@@ -26,7 +26,6 @@ export default function LoginPage() {
     setError("");
 
     try {
-      // TODO: Implement actual login API call
       const response = await fetch("/api/auth/token", {
         method: "POST",
         headers: {

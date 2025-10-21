@@ -6,7 +6,7 @@ import uvicorn
 
 from .database import SessionLocal, engine, Base
 from .models import user, subscription, payment
-from .routers import auth, users, subscriptions, payments, ai_agent, admin
+from .routers import auth, users, subscriptions, payments, ai_agent, admin, organizations, chat, analytics, billing
 from .auth.jwt import JWTBearer
 
 # Create database tables (only if they don't exist)
@@ -53,6 +53,10 @@ app.include_router(subscriptions.router, prefix="/subscriptions", tags=["Subscri
 app.include_router(payments.router, prefix="/payments", tags=["Payments"])
 app.include_router(ai_agent.router, prefix="/ai", tags=["AI Agent"])
 app.include_router(admin.router, prefix="/admin", tags=["Admin"])
+app.include_router(organizations.router, prefix="/organizations", tags=["Organizations"])
+app.include_router(chat.router, prefix="/chat", tags=["Chat"])
+app.include_router(analytics.router, prefix="/analytics", tags=["Analytics"])
+app.include_router(billing.router, prefix="/billing", tags=["Billing"])
 
 @app.get("/")
 async def root():

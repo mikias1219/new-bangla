@@ -1,119 +1,208 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquare, CreditCard, Settings, LogOut, Shield } from "lucide-react";
-import VoiceChat, { speakAiResponse } from "../../components/voice/VoiceChat";
-import SocialMediaIntegration, { createShareableContent } from "../../components/chat/SocialMediaIntegration";
+import {
+  Bot,
+  Upload,
+  MessageSquare,
+  Users,
+  FileText,
+  TrendingUp,
+  Settings,
+  Plus,
+  Play,
+  Pause,
+  Trash2,
+  Eye,
+  BarChart3
+} from "lucide-react";
 
-interface User {
+interface AIAgent {
   id: number;
-  email: string;
-  username: string;
-  full_name: string;
-  is_superuser?: boolean;
+  name: string;
+  description: string;
+  whatsapp_enabled: boolean;
+  facebook_enabled: boolean;
+  total_conversations: number;
+  training_status: string;
 }
 
-interface Subscription {
-  plan: string;
+interface TrainingDocument {
+  id: number;
+  filename: string;
   status: string;
-  trial_end?: string;
+  word_count: number;
+  uploaded_at: string;
+  trained_at: string | null;
+}
+
+interface Organization {
+  id: number;
+  name: string;
+  domain: string;
+  plan: string;
+  max_users: number;
+  max_ai_agents: number;
+  max_monthly_chats: number;
+  current_monthly_chats: number;
 }
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [activeTab, setActiveTab] = useState("chat");
+  const [activeTab, setActiveTab] = useState("agents");
+  const [agents, setAgents] = useState<AIAgent[]>([]);
+  const [documents, setDocuments] = useState<TrainingDocument[]>([]);
+  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-
-    // TODO: Fetch user data and subscription
-    fetchUserData();
-  }, [router]);
-
-  const fetchUserData = async () => {
+  const checkAuth = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) return;
-
-      // Fetch user data from API
-      const userResponse = await fetch("/api/users/me", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        setUser(userData);
-      } else {
-        // Fallback to mock data if API fails
-        setUser({
-          id: 1,
-          email: "user@example.com",
-          username: "johndoe",
-          full_name: "John Doe",
-          is_superuser: false
-        });
+      if (!token) {
+        router.push("/login");
+        return;
       }
 
-      // Fetch subscription data
-      const subscriptionResponse = await fetch("/api/subscriptions/current", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
+      // Load dashboard data
+      await Promise.all([
+        loadOrganization(),
+        loadAIAgents(),
+        loadDocuments()
+      ]);
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      router.push("/login");
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  const loadOrganization = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/organizations/my", {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (subscriptionResponse.ok) {
-        const subscriptionData = await subscriptionResponse.json();
-        setSubscription({
-          plan: subscriptionData.plan || "free",
-          status: subscriptionData.status || "trialing",
-          trial_end: subscriptionData.trial_end
-        });
-      } else {
-        // Fallback to mock subscription data
-        setSubscription({
-          plan: "free",
-          status: "trialing",
-          trial_end: "2024-02-01"
-        });
+      if (response.ok) {
+        const data = await response.json();
+        setOrganization(data);
       }
     } catch (error) {
-      console.error("Failed to fetch user data:", error);
-      // Fallback to mock data
-      setUser({
-        id: 1,
-        email: "user@example.com",
-        username: "johndoe",
-        full_name: "John Doe",
-        is_superuser: false
-      });
-      setSubscription({
-        plan: "free",
-        status: "trialing",
-        trial_end: "2024-02-01"
-      });
+      console.error("Failed to load organization:", error);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    router.push("/");
+  const loadAIAgents = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/organizations/ai-agents", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAgents(data);
+      }
+    } catch (error) {
+      console.error("Failed to load AI agents:", error);
+    }
   };
 
-  if (!user) {
+  const loadDocuments = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/organizations/documents", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDocuments(data);
+      }
+    } catch (error) {
+      console.error("Failed to load documents:", error);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/organizations/documents/upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+
+      if (response.ok) {
+        alert("Document uploaded successfully! Processing will begin shortly.");
+        await loadDocuments(); // Refresh documents list
+      } else {
+        const error = await response.json();
+        alert(`Upload failed: ${error.detail}`);
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const createAIAgent = async () => {
+    const name = prompt("Enter AI Agent name:");
+    const description = prompt("Enter AI Agent description:");
+
+    if (!name || !description) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/organizations/ai-agents", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name, description })
+      });
+
+      if (response.ok) {
+        alert("AI Agent created successfully!");
+        await loadAIAgents();
+      } else {
+        const error = await response.json();
+        alert(`Failed to create agent: ${error.detail}`);
+      }
+    } catch (error) {
+      console.error("Error creating agent:", error);
+      alert("Failed to create AI agent");
+    }
+  };
+
+  const testAgent = (agentId: number) => {
+    // Open chat interface for this agent
+    router.push(`/chat?agent=${agentId}`);
+  };
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -125,15 +214,18 @@ export default function DashboardPage() {
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {organization?.name || "Dashboard"}
+            </h1>
             <div className="flex items-center gap-4">
-              <span className="text-gray-700">Welcome, {user.full_name}</span>
+              <span className="text-gray-600">
+                Plan: <span className="font-semibold capitalize">{organization?.plan}</span>
+              </span>
               <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+                onClick={() => router.push("/")}
+                className="text-gray-600 hover:text-gray-900"
               >
-                <LogOut className="w-4 h-4" />
-                Logout
+                ← Back to Home
               </button>
             </div>
           </div>
@@ -141,332 +233,336 @@ export default function DashboardPage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow p-6">
-              <nav className="space-y-2">
-                <button
-                  onClick={() => setActiveTab("chat")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                    activeTab === "chat"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <MessageSquare className="w-5 h-5" />
-                  AI Chat
-                </button>
-                <button
-                  onClick={() => setActiveTab("subscription")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                    activeTab === "subscription"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <CreditCard className="w-5 h-5" />
-                  Subscription
-                </button>
-                <button
-                  onClick={() => setActiveTab("settings")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                    activeTab === "settings"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <Settings className="w-5 h-5" />
-                  Settings
-                </button>
-                {user?.is_superuser && (
-                  <button
-                    onClick={() => router.push("/admin")}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors text-red-700 hover:bg-red-50"
-                  >
-                    <Shield className="w-5 h-5" />
-                    Admin Panel
-                  </button>
-                )}
-              </nav>
+        {/* Usage Stats */}
+        {organization && (
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Usage Overview</h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="flex items-center">
+                  <Users className="w-8 h-8 text-blue-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-blue-600">AI Agents</p>
+                    <p className="text-2xl font-bold text-blue-900">
+                      {agents.length}/{organization.max_ai_agents}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="flex items-center">
+                  <MessageSquare className="w-8 h-8 text-green-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-green-600">Monthly Chats</p>
+                    <p className="text-2xl font-bold text-green-900">
+                      {organization.current_monthly_chats}/{organization.max_monthly_chats}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <div className="flex items-center">
+                  <FileText className="w-8 h-8 text-purple-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-purple-600">Documents</p>
+                    <p className="text-2xl font-bold text-purple-900">{documents.length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <div className="flex items-center">
+                  <TrendingUp className="w-8 h-8 text-yellow-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-yellow-600">Usage</p>
+                    <p className="text-2xl font-bold text-yellow-900">
+                      {organization.max_monthly_chats > 0 ?
+                        Math.round((organization.current_monthly_chats / organization.max_monthly_chats) * 100) : 0}%
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
+        )}
 
-            {/* Subscription Status */}
-            {subscription && (
-              <div className="bg-white rounded-lg shadow p-6 mt-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Current Plan</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Plan:</span>
-                    <span className="font-medium capitalize">{subscription.plan}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Status:</span>
-                    <span className={`font-medium capitalize ${
-                      subscription.status === 'active' ? 'text-green-600' :
-                      subscription.status === 'trialing' ? 'text-blue-600' : 'text-gray-600'
-                    }`}>
-                      {subscription.status}
-                    </span>
-                  </div>
-                  {subscription.trial_end && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Trial ends:</span>
-                      <span className="font-medium">{subscription.trial_end}</span>
+        {/* Navigation Tabs */}
+        <div className="bg-white rounded-lg shadow mb-8">
+          <div className="border-b border-gray-200">
+            <nav className="flex">
+              {[
+                { id: "agents", label: "AI Agents", icon: Bot },
+                { id: "documents", label: "Training Data", icon: FileText },
+                { id: "analytics", label: "Analytics", icon: BarChart3 },
+                { id: "settings", label: "Settings", icon: Settings }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === tab.id
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="p-6">
+            {/* AI Agents Tab */}
+            {activeTab === "agents" && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900">AI Agents</h2>
+                  <button
+                    onClick={createAIAgent}
+                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create Agent
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {agents.map((agent) => (
+                    <div key={agent.id} className="bg-gray-50 rounded-lg p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">{agent.name}</h3>
+                          <p className="text-gray-600 text-sm">{agent.description}</p>
+                        </div>
+                        <div className={`px-2 py-1 rounded text-xs font-medium ${
+                          agent.training_status === "trained"
+                            ? "bg-green-100 text-green-800"
+                            : agent.training_status === "training"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                        }`}>
+                          {agent.training_status}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Conversations</span>
+                          <span className="font-medium">{agent.total_conversations}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {agent.whatsapp_enabled && (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">WhatsApp</span>
+                          )}
+                          {agent.facebook_enabled && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Facebook</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => testAgent(agent.id)}
+                          className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          Test Chat
+                        </button>
+                        <button className="p-2 text-gray-400 hover:text-gray-600">
+                          <Settings className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                  )}
+                  ))}
+                </div>
+
+                {agents.length === 0 && (
+                  <div className="text-center py-12">
+                    <Bot className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No AI Agents Yet</h3>
+                    <p className="text-gray-600 mb-4">Create your first AI agent to start chatting with your customers.</p>
+                    <button
+                      onClick={createAIAgent}
+                      className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+                    >
+                      Create Your First Agent
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Training Documents Tab */}
+            {activeTab === "documents" && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900">Training Documents</h2>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 cursor-pointer">
+                      <Upload className="w-4 h-4" />
+                      {uploading ? "Uploading..." : "Upload Document"}
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.txt,.csv"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        disabled={uploading}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <h3 className="font-medium text-blue-900 mb-2">Supported File Types</h3>
+                  <p className="text-blue-700 text-sm">
+                    Upload PDF, Word documents (.doc, .docx), text files (.txt), or CSV files to train your AI agents.
+                    Documents are processed automatically and used to provide accurate responses.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  {documents.map((doc) => (
+                    <div key={doc.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-8 h-8 text-gray-400" />
+                          <div>
+                            <h3 className="font-medium text-gray-900">{doc.filename}</h3>
+                            <p className="text-sm text-gray-600">
+                              {doc.word_count} words • Uploaded {new Date(doc.uploaded_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            doc.status === "completed"
+                              ? "bg-green-100 text-green-800"
+                              : doc.status === "processing"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                          }`}>
+                            {doc.status}
+                          </span>
+                          {doc.trained_at && (
+                            <span className="text-xs text-gray-500">
+                              Trained {new Date(doc.trained_at).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {documents.length === 0 && (
+                  <div className="text-center py-12">
+                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Training Documents</h3>
+                    <p className="text-gray-600 mb-4">Upload documents to train your AI agents with your knowledge base.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Analytics Tab */}
+            {activeTab === "analytics" && (
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">Analytics</h2>
+
+                {/* Analytics content will be implemented */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-blue-100 text-sm font-medium">Total Conversations</p>
+                        <p className="text-2xl font-bold">0</p>
+                      </div>
+                      <MessageSquare className="w-8 h-8 text-blue-200" />
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-green-100 text-sm font-medium">Messages This Month</p>
+                        <p className="text-2xl font-bold">0</p>
+                      </div>
+                      <TrendingUp className="w-8 h-8 text-green-200" />
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-purple-100 text-sm font-medium">Avg. Response Time</p>
+                        <p className="text-2xl font-bold">-</p>
+                      </div>
+                      <BarChart3 className="w-8 h-8 text-purple-200" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Platform Usage */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    <h3 className="font-medium text-gray-900 mb-4">Platform Usage</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Web Chat</span>
+                        <span className="font-medium">0%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">WhatsApp</span>
+                        <span className="font-medium">0%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Facebook</span>
+                        <span className="font-medium">0%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recent Activity */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    <h3 className="font-medium text-gray-900 mb-4">Recent Conversations</h3>
+                    <div className="space-y-3">
+                      <p className="text-gray-500 text-sm">No recent conversations</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {activeTab === "chat" && <ChatInterface />}
-            {activeTab === "subscription" && <SubscriptionManager />}
-            {activeTab === "settings" && <SettingsPanel user={user} />}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
-
-function ChatInterface() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputMessage, setInputMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [voiceMode, setVoiceMode] = useState(false);
-  const [socialMode, setSocialMode] = useState(false);
-  const [lastAiResponse, setLastAiResponse] = useState("");
-
-  const sendMessage = async (messageText?: string) => {
-    const messageToSend = messageText || inputMessage;
-    if (!messageToSend.trim()) return;
-
-    const userMessage: ChatMessage = { role: "user", content: messageToSend };
-    setMessages(prev => [...prev, userMessage]);
-    setInputMessage("");
-    setIsLoading(true);
-
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("No authentication token found");
-      }
-
-      const response = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          message: messageToSend,
-          conversation_id: `conv_${Date.now()}`,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const aiMessage: ChatMessage = {
-          role: "assistant",
-          content: data.response,
-        };
-        setMessages(prev => [...prev, aiMessage]);
-        setLastAiResponse(data.response);
-
-        // Speak the AI response if voice mode is enabled
-        if (voiceMode) {
-          speakAiResponse(data.response);
-        }
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to get AI response");
-      }
-    } catch (error) {
-      console.error("Failed to send message:", error);
-      const errorMessage: ChatMessage = {
-        role: "assistant",
-        content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`,
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVoiceMessage = (voiceMessage: string) => {
-    sendMessage(voiceMessage);
-  };
-
-  return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">AI Chat</h2>
-            <p className="text-gray-600">Chat with our intelligent AI assistant</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm text-gray-600">
-              <input
-                type="checkbox"
-                checked={voiceMode}
-                onChange={(e) => setVoiceMode(e.target.checked)}
-                className="rounded"
-              />
-              Voice Mode
-            </label>
-            <label className="flex items-center gap-2 text-sm text-gray-600">
-              <input
-                type="checkbox"
-                checked={socialMode}
-                onChange={(e) => setSocialMode(e.target.checked)}
-                className="rounded"
-              />
-              Social Share
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div className="h-96 overflow-y-auto p-6 space-y-4">
-        {messages.length === 0 && (
-          <div className="text-center text-gray-500 mt-20">
-            <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Start a conversation with our AI assistant</p>
-          </div>
-        )}
-
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                message.role === "user"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-900"
-              }`}
-            >
-              {message.content}
-            </div>
-          </div>
-        ))}
-
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 px-4 py-2 rounded-lg">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+            {/* Settings Tab */}
+            {activeTab === "settings" && (
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">Organization Settings</h2>
+                {organization && (
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    <h3 className="font-medium text-gray-900 mb-4">Organization Information</h3>
+                    <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Organization Name</dt>
+                        <dd className="text-sm text-gray-900">{organization.name}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Domain</dt>
+                        <dd className="text-sm text-gray-900">{organization.domain}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Plan</dt>
+                        <dd className="text-sm text-gray-900 capitalize">{organization.plan}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Max Users</dt>
+                        <dd className="text-sm text-gray-900">{organization.max_users}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
           </div>
-        )}
-      </div>
-
-      <div className="p-6 border-t border-gray-200">
-        <div className="flex gap-4">
-          <input
-            type="text"
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-            placeholder="Type your message..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isLoading}
-          />
-          <button
-            onClick={() => sendMessage()}
-            disabled={isLoading || !inputMessage.trim()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Send
-          </button>
-        </div>
-      </div>
-
-      {/* Voice Chat Component */}
-      {voiceMode && (
-        <VoiceChat
-          onVoiceMessage={handleVoiceMessage}
-          isLoading={isLoading}
-        />
-      )}
-
-      {/* Social Media Integration */}
-      {socialMode && lastAiResponse && (
-        <SocialMediaIntegration
-          message={createShareableContent(lastAiResponse, "AI Response from Bangla Chat Pro")}
-          onShare={(platform, message) => {
-            console.log(`Sharing to ${platform}:`, message);
-            // Here you would integrate with actual social media APIs
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function SubscriptionManager() {
-  return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="p-6 border-b border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900">Subscription Management</h2>
-        <p className="text-gray-600">Manage your subscription and billing</p>
-      </div>
-      <div className="p-6">
-        <p className="text-gray-600">Subscription management features will be available soon.</p>
-      </div>
-    </div>
-  );
-}
-
-function SettingsPanel({ user }: { user: User }) {
-  return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="p-6 border-b border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900">Account Settings</h2>
-        <p className="text-gray-600">Manage your account information</p>
-      </div>
-      <div className="p-6">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Full Name</label>
-            <input
-              type="text"
-              defaultValue={user.full_name}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              defaultValue={user.email}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Username</label>
-            <input
-              type="text"
-              defaultValue={user.username}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-            Save Changes
-          </button>
         </div>
       </div>
     </div>

@@ -35,7 +35,6 @@ export default function RegisterPage() {
     }
 
     try {
-      // TODO: Implement actual registration API call
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
