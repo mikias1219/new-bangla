@@ -74,8 +74,8 @@ STRIPE_SECRET_KEY=your_stripe_key
 
 ### 3. Initialize Database
 
-```bash
-cd backend
+   ```bash
+   cd backend
 
 # Migrate to multi-tenant architecture
 python migrate_to_multi_tenant.py
@@ -86,7 +86,7 @@ python create_admin.py
 
 ### 4. Start Services
 
-```bash
+   ```bash
 # Terminal 1 - Backend
 cd backend
 source venv/bin/activate
@@ -178,7 +178,7 @@ npm run dev
 ### Core Endpoints
 
 #### Authentication
-```bash
+   ```bash
 POST /auth/token          # Login
 POST /auth/register       # Register new user
 ```
@@ -192,14 +192,14 @@ POST /organizations/documents/upload      # Upload training docs
 ```
 
 #### Chat & AI
-```bash
+   ```bash
 POST /chat/agents/{id}/chat              # Send message to AI
 GET  /chat/conversations                 # Get conversations
 GET  /analytics/conversations/overview   # Chat analytics
-```
+   ```
 
 #### Integrations
-```bash
+   ```bash
 POST /chat/webhooks/whatsapp             # WhatsApp webhook
 POST /chat/webhooks/facebook             # Facebook webhook
 GET  /chat/webhooks/whatsapp             # WhatsApp verification

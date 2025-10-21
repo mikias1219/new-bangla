@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Send, Bot, User, ArrowLeft, MessageSquare } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 interface Message {
   id: number;
@@ -275,3 +276,8 @@ export default function ChatPage() {
     </div>
   );
 }
+
+export default ChatPage;
+
+// Force dynamic rendering to avoid SSR issues with useSearchParams
+export const dynamic = 'force-dynamic';

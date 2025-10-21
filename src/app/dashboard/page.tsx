@@ -59,11 +59,11 @@ export default function DashboardPage() {
 
   const checkAuth = useCallback(async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.push("/login");
-        return;
-      }
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
+      return;
+    }
 
       // Load dashboard data
       await Promise.all([
@@ -324,7 +324,7 @@ export default function DashboardPage() {
                     <Plus className="w-4 h-4" />
                     Create Agent
                   </button>
-                </div>
+            </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {agents.map((agent) => (
@@ -333,7 +333,7 @@ export default function DashboardPage() {
                         <div>
                           <h3 className="text-lg font-semibold text-gray-900">{agent.name}</h3>
                           <p className="text-gray-600 text-sm">{agent.description}</p>
-                        </div>
+                  </div>
                         <div className={`px-2 py-1 rounded text-xs font-medium ${
                           agent.training_status === "trained"
                             ? "bg-green-100 text-green-800"
@@ -371,7 +371,7 @@ export default function DashboardPage() {
                         <button className="p-2 text-gray-400 hover:text-gray-600">
                           <Settings className="w-4 h-4" />
                         </button>
-                      </div>
+                  </div>
                     </div>
                   ))}
                 </div>
@@ -394,23 +394,23 @@ export default function DashboardPage() {
 
             {/* Training Documents Tab */}
             {activeTab === "documents" && (
-              <div>
+          <div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-semibold text-gray-900">Training Documents</h2>
-                  <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
                     <label className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 cursor-pointer">
                       <Upload className="w-4 h-4" />
                       {uploading ? "Uploading..." : "Upload Document"}
-                      <input
+              <input
                         type="file"
                         accept=".pdf,.doc,.docx,.txt,.csv"
                         onChange={handleFileUpload}
                         className="hidden"
                         disabled={uploading}
                       />
-                    </label>
-                  </div>
-                </div>
+            </label>
+          </div>
+        </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                   <h3 className="font-medium text-blue-900 mb-2">Supported File Types</h3>
@@ -418,7 +418,7 @@ export default function DashboardPage() {
                     Upload PDF, Word documents (.doc, .docx), text files (.txt), or CSV files to train your AI agents.
                     Documents are processed automatically and used to provide accurate responses.
                   </p>
-                </div>
+      </div>
 
                 <div className="space-y-4">
                   {documents.map((doc) => (
@@ -432,7 +432,7 @@ export default function DashboardPage() {
                               {doc.word_count} words • Uploaded {new Date(doc.uploaded_at).toLocaleDateString()}
                             </p>
                           </div>
-                        </div>
+          </div>
                         <div className="flex items-center gap-2">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
                             doc.status === "completed"
@@ -449,9 +449,9 @@ export default function DashboardPage() {
                             </span>
                           )}
                         </div>
-                      </div>
-                    </div>
-                  ))}
+            </div>
+          </div>
+        ))}
                 </div>
 
                 {documents.length === 0 && (
@@ -478,8 +478,8 @@ export default function DashboardPage() {
                         <p className="text-2xl font-bold">0</p>
                       </div>
                       <MessageSquare className="w-8 h-8 text-blue-200" />
-                    </div>
-                  </div>
+            </div>
+          </div>
 
                   <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
                     <div className="flex items-center justify-between">
@@ -489,7 +489,7 @@ export default function DashboardPage() {
                       </div>
                       <TrendingUp className="w-8 h-8 text-green-200" />
                     </div>
-                  </div>
+      </div>
 
                   <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white">
                     <div className="flex items-center justify-between">
@@ -499,8 +499,8 @@ export default function DashboardPage() {
                       </div>
                       <BarChart3 className="w-8 h-8 text-purple-200" />
                     </div>
-                  </div>
-                </div>
+        </div>
+      </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Platform Usage */}
@@ -527,10 +527,10 @@ export default function DashboardPage() {
                     <h3 className="font-medium text-gray-900 mb-4">Recent Conversations</h3>
                     <div className="space-y-3">
                       <p className="text-gray-500 text-sm">No recent conversations</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+    </div>
+      </div>
+      </div>
+    </div>
             )}
 
             {/* Settings Tab */}
@@ -544,16 +544,16 @@ export default function DashboardPage() {
                       <div>
                         <dt className="text-sm font-medium text-gray-500">Organization Name</dt>
                         <dd className="text-sm text-gray-900">{organization.name}</dd>
-                      </div>
-                      <div>
+      </div>
+          <div>
                         <dt className="text-sm font-medium text-gray-500">Domain</dt>
                         <dd className="text-sm text-gray-900">{organization.domain}</dd>
-                      </div>
-                      <div>
+          </div>
+          <div>
                         <dt className="text-sm font-medium text-gray-500">Plan</dt>
                         <dd className="text-sm text-gray-900 capitalize">{organization.plan}</dd>
-                      </div>
-                      <div>
+          </div>
+          <div>
                         <dt className="text-sm font-medium text-gray-500">Max Users</dt>
                         <dd className="text-sm text-gray-900">{organization.max_users}</dd>
                       </div>
