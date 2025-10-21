@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     // Decode the token to get user info (basic validation)
     try {
       jwt.verify(token, JWT_SECRET);
-    } catch (error) {
+    } catch (_error) {
       return NextResponse.json(
         { error: 'Invalid token' },
         { status: 401 }

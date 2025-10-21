@@ -5,7 +5,7 @@ This guide explains how to deploy Bangla Chat Pro with both frontend and backend
 
 ## Architecture
 - **Frontend**: Next.js application served on `https://bdchatpro.com`
-- **Backend**: FastAPI application served on `https://api.bdchatpro.com`
+- **Backend**: FastAPI application served on `https://bdchatpro.com/api`
 - **Database**: SQLite (file-based)
 - **Reverse Proxy**: Nginx
 - **SSL**: Let's Encrypt certificates
@@ -80,7 +80,7 @@ STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 
 **Frontend (.env.local)**:
 ```env
-NEXT_PUBLIC_BACKEND_URL=https://api.bdchatpro.com
+NEXT_PUBLIC_BACKEND_URL=https://bdchatpro.com/api
 NEXT_PUBLIC_SITE_URL=https://bdchatpro.com
 ```
 
@@ -89,7 +89,7 @@ NEXT_PUBLIC_SITE_URL=https://bdchatpro.com
 Point your domain to the server:
 - `bdchatpro.com` → `88.222.245.41`
 - `www.bdchatpro.com` → `88.222.245.41`
-- `api.bdchatpro.com` → `88.222.245.41`
+- API is proxied via `/api` on the main domain (no subdomain)
 
 ## Deployment Process
 
@@ -134,7 +134,7 @@ sudo systemctl restart nginx
 
 ### Nginx Configuration
 - Frontend: `https://bdchatpro.com` → `http://localhost:3002`
-- Backend: `https://api.bdchatpro.com` → `http://localhost:8000`
+- Backend: `https://bdchatpro.com/api` → `http://localhost:8000`
 
 ## Admin Access
 
@@ -156,7 +156,7 @@ sudo systemctl status nginx
 
 # Check endpoints
 curl -I https://bdchatpro.com
-curl -I https://api.bdchatpro.com
+curl -I https://bdchatpro.com/api
 ```
 
 ### Logs

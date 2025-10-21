@@ -96,7 +96,7 @@ run_cmd "cd $REMOTE_PROJECT_DIR && npm install"
 
 # Create production environment file
 run_cmd "cd $REMOTE_PROJECT_DIR && cat > .env.local << 'EOF'
-NEXT_PUBLIC_BACKEND_URL=https://api.bdchatpro.com
+NEXT_PUBLIC_BACKEND_URL=https://bdchatpro.com/api
 NEXT_PUBLIC_SITE_URL=https://bdchatpro.com
 EOF"
 

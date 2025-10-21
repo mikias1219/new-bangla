@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Users,
@@ -58,9 +58,9 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     checkAdminAccess();
-  }, []);
+  }, [checkAdminAccess]);
 
-  const checkAdminAccess = async () => {
+  const checkAdminAccess = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -98,7 +98,7 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
   const loadAdminStats = async () => {
     try {

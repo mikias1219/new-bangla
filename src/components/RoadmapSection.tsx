@@ -77,11 +77,11 @@ export default function RoadmapSection() {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-            What's Coming Next
+            What&apos;s Coming Next
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            We're continuously innovating to bring you the most advanced AI conversation experience.
-            Here's our roadmap for the future.
+            We&apos;re continuously innovating to bring you the most advanced AI conversation experience.
+            Here&apos;s our roadmap for the future.
           </p>
         </div>
 
@@ -114,7 +114,7 @@ export default function RoadmapSection() {
               Have a Feature Request?
             </h3>
             <p className="text-gray-600 mb-6">
-              We're always listening to our users. Share your ideas and help shape the future of AI conversations.
+              We&apos;re always listening to our users. Share your ideas and help shape the future of AI conversations.
             </p>
             <a
               href="/feedback"

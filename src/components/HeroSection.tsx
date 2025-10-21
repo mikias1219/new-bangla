@@ -99,7 +99,7 @@ export default function HeroSection() {
                       </svg>
                     </div>
                     <div className="bg-blue-50 rounded-lg px-3 py-2 max-w-xs">
-                      <p className="text-sm text-gray-800">I'd be happy to help! What kind of project are you working on?</p>
+                      <p className="text-sm text-gray-800">I&apos;d be happy to help! What kind of project are you working on?</p>
                     </div>
                   </div>
                 </div>

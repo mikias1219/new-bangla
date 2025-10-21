@@ -120,7 +120,7 @@ run_cmd "cd $REMOTE_PROJECT_DIR && npm install"
 
 # Create production environment file
 run_cmd "cd $REMOTE_PROJECT_DIR && cat > .env.local << 'EOF'
-NEXT_PUBLIC_BACKEND_URL=https://api.$DOMAIN
+NEXT_PUBLIC_BACKEND_URL=https://$DOMAIN/api
 NEXT_PUBLIC_SITE_URL=https://$DOMAIN
 EOF"
 
@@ -254,12 +254,12 @@ run_cmd "systemctl status nginx --no-pager -l | head -20"
 # Test endpoints
 print_status "Testing endpoints..."
 run_cmd "curl -s -o /dev/null -w 'Frontend HTTP status: %{http_code}\n' https://$DOMAIN/ || echo 'Frontend check failed'"
-run_cmd "curl -s -o /dev/null -w 'Backend API HTTP status: %{http_code}\n' https://api.$DOMAIN/ || echo 'Backend API check failed'"
+run_cmd "curl -s -o /dev/null -w 'Backend API HTTP status: %{http_code}\n' https://$DOMAIN/api/ || echo 'Backend API check failed'"
 
 print_success "Deployment completed successfully!"
 print_success "=================================="
 print_success "Frontend: https://$DOMAIN"
-print_success "Backend API: https://api.$DOMAIN"
+print_success "Backend API: https://$DOMAIN/api"
 print_success "Admin login: admin@$DOMAIN / admin123"
 print_warning "Remember to change the admin password after first login!"
 print_warning "SSL certificates are set to auto-renew via certbot"

@@ -17,7 +17,6 @@ export default function VoiceChat({ onVoiceMessage, isLoading }: VoiceChatProps)
 
   const {
     transcript,
-    listening,
     resetTranscript,
     browserSupportsSpeechRecognition
   } = useSpeechRecognition();
@@ -98,7 +97,7 @@ export default function VoiceChat({ onVoiceMessage, isLoading }: VoiceChatProps)
 
     window.addEventListener('aiResponse', handleAiResponse as EventListener);
     return () => window.removeEventListener('aiResponse', handleAiResponse as EventListener);
-  }, [voiceEnabled]);
+  }, [voiceEnabled, speakText]);
 
   if (!browserSupportsSpeechRecognition) {
     return (

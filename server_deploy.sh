@@ -84,7 +84,7 @@ npm install
 # Create production environment file
 print_status "Setting up frontend environment..."
 cat > .env.local << 'EOF'
-NEXT_PUBLIC_BACKEND_URL=https://api.bdchatpro.com
+NEXT_PUBLIC_BACKEND_URL=https://bdchatpro.com/api
 NEXT_PUBLIC_SITE_URL=https://bdchatpro.com
 EOF
 
@@ -117,6 +117,7 @@ server {
     gzip_min_length 1024;
     gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
 
+    # Frontend routes
     location / {
         proxy_pass http://localhost:3002;
         proxy_http_version 1.1;
@@ -128,21 +129,10 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
     }
-}
 
-# Backend API
-server {
-    listen 80;
-    server_name api.bdchatpro.com;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "no-referrer-when-downgrade" always;
-
-    location / {
-        proxy_pass http://localhost:8000;
+    # Backend API routes
+    location /api/ {
+        proxy_pass http://localhost:8000/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -176,7 +166,7 @@ fi
 print_status "Ensuring SSL certificates..."
 if [ ! -d "/etc/letsencrypt/live/bdchatpro.com" ]; then
     print_status "Obtaining SSL certificates..."
-    certbot --nginx -d bdchatpro.com -d www.bdchatpro.com -d api.bdchatpro.com --non-interactive --agree-tos --email admin@bdchatpro.com
+    certbot --nginx -d bdchatpro.com -d www.bdchatpro.com --non-interactive --agree-tos --email admin@bdchatpro.com
 fi
 
 # 6. Start/restart services with PM2
@@ -212,5 +202,6 @@ systemctl status nginx --no-pager
 
 print_success "Deployment completed!"
 print_success "Frontend: https://bdchatpro.com"
-print_success "Backend API: https://api.bdchatpro.com"
-print_success "Admin login: admin@bdchatpro.com / admin123!@#"print_warning "Remember to change the admin password after first login!"
+print_success "Backend API: https://bdchatpro.com/api"
+print_success "Admin login: admin@bdchatpro.com / admin123!@#"
+print_warning "Remember to change the admin password after first login!"
