@@ -4,7 +4,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:800
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -18,8 +18,9 @@ export async function PUT(
 
     const body = await request.json();
     const { is_superuser } = body;
+    const { userId } = await params;
 
-    const response = await fetch(`${BACKEND_URL}/admin/users/${params.userId}/admin`, {
+    const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/admin`, {
       method: 'PUT',
       headers: {
         'Authorization': authHeader,

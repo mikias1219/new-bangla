@@ -71,7 +71,7 @@ EOF
 
 # Create admin user if it doesn't exist
 print_status "Ensuring admin user exists..."
-python create_admin.py
+python3 create_admin.py
 
 # 3. Setup frontend
 print_status "Setting up frontend..."

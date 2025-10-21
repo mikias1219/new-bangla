@@ -56,10 +56,6 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    checkAdminAccess();
-  }, [checkAdminAccess]);
-
   const checkAdminAccess = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
@@ -99,6 +95,10 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   }, [router]);
+
+  useEffect(() => {
+    checkAdminAccess();
+  }, [checkAdminAccess]);
 
   const loadAdminStats = async () => {
     try {
