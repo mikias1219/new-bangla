@@ -45,22 +45,38 @@ def authenticate_user(db: Session, username: str, password: str):
     return user
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(SessionLocal)):
+    print(f"DEBUG: Received credentials: {credentials}")
+    print(f"DEBUG: Credentials scheme: {credentials.scheme}")
+    print(f"DEBUG: Credentials token: {credentials.credentials[:20]}...")
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except JWTError:
+
+    if credentials.scheme != "Bearer":
+        print("DEBUG: Invalid scheme")
         raise credentials_exception
 
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        print(f"DEBUG: Decoded payload: {payload}")
+        username: str = payload.get("sub")
+        if username is None:
+            print("DEBUG: No username in token")
+            raise credentials_exception
+    except JWTError as e:
+        print(f"DEBUG: JWT decode error: {e}")
+        raise credentials_exception
+
+    print(f"DEBUG: Looking for user: {username}")
     user = db.query(User).filter(User.username == username).first()
     if user is None:
+        print(f"DEBUG: User not found: {username}")
         raise credentials_exception
+
+    print(f"DEBUG: User found: {user.username}")
     return user
 
 class JWTBearer(HTTPBearer):
