@@ -8,7 +8,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy import create_engine, text
-from database import SQLALCHEMY_DATABASE_URL
+from app.database import SQLALCHEMY_DATABASE_URL
 
 def add_total_messages_column():
     """Add total_messages column to conversations table"""
