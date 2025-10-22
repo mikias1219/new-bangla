@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from ..database import SessionLocal
 from ..models import (
     User, Subscription, SubscriptionPlan, SubscriptionStatus,
-    Organization, AIAgent, Conversation, Message, Payment
+    Organization, AIAgent, Conversation, Message, Payment, OrganizationPlan, OrganizationStatus
 )
 from ..auth.jwt import get_current_user, JWTBearer
 
@@ -330,3 +330,110 @@ async def get_all_ai_agents(
         "is_active": agent.is_active,
         "created_at": agent.created_at.isoformat()
     } for agent in agents]
+
+@router.post("/organizations/{org_id}/ai-agents")
+async def create_ai_agent_for_organization(
+    org_id: int,
+    name: str,
+    description: Optional[str] = None,
+    system_prompt: Optional[str] = None,
+    current_user: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a new AI agent for a specific organization (admin only)"""
+    # Verify organization exists
+    organization = db.query(Organization).filter(Organization.id == org_id).first()
+    if not organization:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    # Check agent limits for the organization
+    agent_count = db.query(AIAgent).filter(AIAgent.organization_id == org_id).count()
+    if agent_count >= organization.max_ai_agents:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Organization has reached maximum AI agents limit ({organization.max_ai_agents})"
+        )
+
+    # Create system prompt tailored to the organization
+    if not system_prompt:
+        system_prompt = f"""You are {name}, an AI assistant for {organization.name}.
+        You help customers with their inquiries about {organization.name}'s products and services.
+        Be helpful, professional, and knowledgeable about {organization.name}.
+        Always respond in a friendly and customer-service oriented manner.
+        If you don't know something specific, be honest and offer to connect them with a human representative."""
+
+    agent = AIAgent(
+        organization_id=org_id,
+        name=name,
+        description=description,
+        system_prompt=system_prompt,
+        training_status="created"
+    )
+
+    db.add(agent)
+    db.commit()
+    db.refresh(agent)
+
+    return {
+        "id": agent.id,
+        "name": agent.name,
+        "description": agent.description,
+        "organization_name": organization.name,
+        "status": "created",
+        "message": f"AI agent created successfully for {organization.name}"
+    }
+
+@router.put("/ai-agents/{agent_id}/status")
+async def update_ai_agent_status(
+    agent_id: int,
+    is_active: bool,
+    current_user: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db)
+):
+    """Activate or deactivate an AI agent"""
+    agent = db.query(AIAgent).filter(AIAgent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="AI agent not found")
+
+    agent.is_active = is_active
+    agent.training_status = "trained" if is_active else "inactive"
+    db.commit()
+
+    return {"message": f"AI agent {'activated' if is_active else 'deactivated'} successfully"}
+
+@router.post("/test-openai")
+async def test_openai_directly(
+    message: str,
+    model: str = "gpt-4",
+    system_prompt: str = "You are a helpful AI assistant.",
+    current_user: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db)
+):
+    """Test OpenAI integration directly without specific agent (admin only)"""
+    try:
+        from ..services.ai_chat import AIChatService
+        ai_service = AIChatService()
+
+        # Create a temporary conversation for testing
+        from ..models import Conversation
+        temp_conversation = Conversation(
+            platform="admin_test",
+            status="active"
+        )
+        db.add(temp_conversation)
+        db.commit()
+
+        # Send the message
+        response = ai_service.send_message(temp_conversation.id, message, db)
+
+        # Clean up the temporary conversation
+        db.delete(temp_conversation)
+        db.commit()
+
+        if response:
+            return {"response": response, "model": model, "status": "success"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to get response from OpenAI")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OpenAI test failed: {str(e)}")

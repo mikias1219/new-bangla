@@ -372,7 +372,21 @@ export default function DashboardPage() {
                         <button className="p-2 text-gray-400 hover:text-gray-600">
                           <Settings className="w-4 h-4" />
                         </button>
-                  </div>
+                      </div>
+
+                      {agent.training_status === "trained" && (
+                        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <p className="text-xs text-green-700 mb-2">
+                            ✅ Agent is ready! Test it before integrating with social media.
+                          </p>
+                          <button
+                            onClick={() => router.push(`/integration-setup?agent=${agent.id}`)}
+                            className="w-full text-xs bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700"
+                          >
+                            Setup Social Media Integration
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

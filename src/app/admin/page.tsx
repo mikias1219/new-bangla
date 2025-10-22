@@ -86,6 +86,15 @@ export default function AdminDashboard() {
   const [testInput, setTestInput] = useState("");
   const [isTesting, setIsTesting] = useState(false);
   const [isVoiceTesting, setIsVoiceTesting] = useState(false);
+
+  // AI Agent Management states
+  const [showCreateAgentModal, setShowCreateAgentModal] = useState(false);
+  const [selectedOrgForAgent, setSelectedOrgForAgent] = useState<number | null>(null);
+  const [newAgentData, setNewAgentData] = useState({
+    name: "",
+    description: "",
+    systemPrompt: ""
+  });
   const router = useRouter();
 
   const checkAdminAccess = useCallback(async () => {
@@ -132,7 +141,7 @@ export default function AdminDashboard() {
 
   // Test AI Agent Functions
   const sendTestMessage = async (message: string) => {
-    if (!selectedAgentId || !message.trim()) return;
+    if (!message.trim()) return;
 
     setIsTesting(true);
     const userMessage = { type: 'user' as const, content: message, timestamp: new Date() };
@@ -140,27 +149,46 @@ export default function AdminDashboard() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/chat/send-message?agent_id=${selectedAgentId}`, {
+
+      // Use different endpoint based on whether an agent is selected
+      let endpoint = "";
+      let requestBody: any = { message: message.trim() };
+
+      if (selectedAgentId) {
+        // Test with specific agent
+        endpoint = `/api/chat/send-message?agent_id=${selectedAgentId}`;
+      } else {
+        // General OpenAI testing without specific agent
+        endpoint = `/api/admin/test-openai`;
+        requestBody = {
+          message: message.trim(),
+          model: "gpt-4",
+          system_prompt: "You are a helpful AI assistant. Respond in a friendly and professional manner."
+        };
+      }
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify({ message: message.trim() }),
+        body: JSON.stringify(requestBody),
       });
 
       if (response.ok) {
         const data = await response.json();
-        const aiMessage = { type: 'ai' as const, content: data.response, timestamp: new Date() };
+        const aiResponse = selectedAgentId ? data.response : data.choices[0].message.content;
+        const aiMessage = { type: 'ai' as const, content: aiResponse, timestamp: new Date() };
         setTestMessages(prev => [...prev, aiMessage]);
 
         // Speak the AI response
-        if (data.response) {
-          speakAiResponse(data.response);
+        if (aiResponse) {
+          speakAiResponse(aiResponse);
         }
       } else {
         const error = await response.json();
-        const errorMessage = { type: 'ai' as const, content: `Error: ${error.detail}`, timestamp: new Date() };
+        const errorMessage = { type: 'ai' as const, content: `Error: ${error.detail || 'Failed to get AI response'}`, timestamp: new Date() };
         setTestMessages(prev => [...prev, errorMessage]);
       }
     } catch (error) {
@@ -181,6 +209,67 @@ export default function AdminDashboard() {
   const clearTestChat = () => {
     setTestMessages([]);
     setTestInput("");
+  };
+
+  // AI Agent Management Functions
+  const createAIAgentForOrg = async () => {
+    if (!selectedOrgForAgent || !newAgentData.name.trim()) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/admin/organizations/${selectedOrgForAgent}/ai-agents`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: newAgentData.name.trim(),
+          description: newAgentData.description.trim(),
+          system_prompt: newAgentData.systemPrompt.trim() || undefined
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(`AI Agent created successfully for ${data.organization_name}!`);
+        setShowCreateAgentModal(false);
+        setNewAgentData({ name: "", description: "", systemPrompt: "" });
+        setSelectedOrgForAgent(null);
+        await loadAiAgents(); // Refresh the list
+      } else {
+        const error = await response.json();
+        alert(`Failed to create AI agent: ${error.detail}`);
+      }
+    } catch (error) {
+      console.error("Create agent error:", error);
+      alert("Failed to create AI agent. Please try again.");
+    }
+  };
+
+  const toggleAgentStatus = async (agentId: number, isActive: boolean) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/admin/ai-agents/${agentId}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ is_active: !isActive }),
+      });
+
+      if (response.ok) {
+        alert(`AI Agent ${!isActive ? 'activated' : 'deactivated'} successfully!`);
+        await loadAiAgents(); // Refresh the list
+      } else {
+        const error = await response.json();
+        alert(`Failed to update agent status: ${error.detail}`);
+      }
+    } catch (error) {
+      console.error("Toggle agent status error:", error);
+      alert("Failed to update agent status. Please try again.");
+    }
   };
 
   useEffect(() => {
@@ -456,7 +545,16 @@ export default function AdminDashboard() {
               <OrganizationManagement organizations={organizations} />
             )}
             {activeTab === "ai-agents" && (
-              <AIAgentManagement aiAgents={aiAgents} />
+              <AIAgentManagement
+                aiAgents={aiAgents}
+                organizations={organizations}
+                onCreateAgent={() => setShowCreateAgentModal(true)}
+                onToggleStatus={toggleAgentStatus}
+                onTestAgent={(agentId) => {
+                  setSelectedAgentId(agentId);
+                  setActiveTab("test-ai");
+                }}
+              />
             )}
             {activeTab === "test-ai" && (
               <TestAIAgents
@@ -479,6 +577,103 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Create AI Agent Modal */}
+      {showCreateAgentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Create AI Agent</h3>
+                <button
+                  onClick={() => setShowCreateAgentModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Organization
+                  </label>
+                  <select
+                    value={selectedOrgForAgent || ""}
+                    onChange={(e) => setSelectedOrgForAgent(e.target.value ? parseInt(e.target.value) : null)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Choose an organization...</option>
+                    {organizations.map((org) => (
+                      <option key={org.id} value={org.id}>
+                        {org.name} ({org.domain})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Agent Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newAgentData.name}
+                    onChange={(e) => setNewAgentData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., Customer Support Assistant"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={newAgentData.description}
+                    onChange={(e) => setNewAgentData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Describe what this AI agent will help with..."
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    System Prompt (Optional)
+                  </label>
+                  <textarea
+                    value={newAgentData.systemPrompt}
+                    onChange={(e) => setNewAgentData(prev => ({ ...prev, systemPrompt: e.target.value }))}
+                    placeholder="Custom system prompt for the AI agent..."
+                    rows={4}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    If left empty, a default prompt will be generated based on the organization.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowCreateAgentModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createAIAgentForOrg}
+                  disabled={!selectedOrgForAgent || !newAgentData.name.trim()}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Create Agent
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -741,12 +936,35 @@ function OrganizationManagement({ organizations }: { organizations: Organization
   );
 }
 
-function AIAgentManagement({ aiAgents }: { aiAgents: AIAgent[] }) {
+function AIAgentManagement({
+  aiAgents,
+  organizations,
+  onCreateAgent,
+  onToggleStatus,
+  onTestAgent
+}: {
+  aiAgents: AIAgent[];
+  organizations: Organization[];
+  onCreateAgent: () => void;
+  onToggleStatus: (agentId: number, isActive: boolean) => void;
+  onTestAgent: (agentId: number) => void;
+}) {
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-6 border-b border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900">AI Agent Management</h2>
-        <p className="text-gray-600">Monitor and manage all AI agents across organizations</p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">AI Agent Management</h2>
+            <p className="text-gray-600">Monitor and manage all AI agents across organizations</p>
+          </div>
+          <button
+            onClick={onCreateAgent}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            Create Agent
+          </button>
+        </div>
       </div>
       <div className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -796,6 +1014,26 @@ function AIAgentManagement({ aiAgents }: { aiAgents: AIAgent[] }) {
                     Instagram
                   </span>
                 )}
+              </div>
+
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={() => onTestAgent(agent.id)}
+                  className="flex-1 flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700"
+                >
+                  <Play className="w-3 h-3" />
+                  Test
+                </button>
+                <button
+                  onClick={() => onToggleStatus(agent.id, agent.is_active)}
+                  className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded text-sm ${
+                    agent.is_active
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  }`}
+                >
+                  {agent.is_active ? 'Deactivate' : 'Activate'}
+                </button>
               </div>
             </div>
           ))}
@@ -928,20 +1166,23 @@ function TestAIAgents({
         {/* Agent Selection */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select AI Agent to Test
+            Select AI Agent to Test (Optional)
           </label>
           <select
             value={selectedAgentId || ""}
             onChange={(e) => setSelectedAgentId(e.target.value ? parseInt(e.target.value) : null)}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="">Choose an AI agent...</option>
+            <option value="">General OpenAI Testing (No specific agent)</option>
             {aiAgents.map((agent) => (
               <option key={agent.id} value={agent.id}>
-                {agent.name} - {agent.description}
+                {agent.name} - {agent.description} ({agent.organization_name})
               </option>
             ))}
           </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Choose "General OpenAI Testing" to test OpenAI functionality without a specific agent, or select a specific agent to test with their trained knowledge.
+          </p>
         </div>
 
         {selectedAgent && (
