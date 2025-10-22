@@ -28,6 +28,7 @@ function ChatPageContent() {
   const [loading, setLoading] = useState(false);
   const [agent, setAgent] = useState<AIAgent | null>(null);
   const [conversationId, setConversationId] = useState<number | null>(null);
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -135,6 +136,7 @@ function ChatPageContent() {
   const handleVoiceMessage = (voiceMessage: string) => {
     // Set the voice message as the new message and send it
     setNewMessage(voiceMessage);
+    setIsVoiceMode(false); // Exit voice mode after sending
     // Send the message immediately
     const event = { preventDefault: () => {} } as React.FormEvent;
     sendMessage(event);
@@ -257,13 +259,13 @@ function ChatPageContent() {
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder={`Ask ${agent.name} a question...`}
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                disabled={loading}
+                placeholder={isVoiceMode ? "Voice mode active - use microphone..." : `Ask ${agent.name} a question...`}
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base disabled:bg-gray-100 disabled:cursor-not-allowed"
+                disabled={loading || isVoiceMode}
               />
               <button
                 type="submit"
-                disabled={!newMessage.trim() || loading}
+                disabled={!newMessage.trim() || loading || isVoiceMode}
                 className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[80px] sm:min-w-0"
               >
                 <Send className="w-4 h-4" />
@@ -273,26 +275,13 @@ function ChatPageContent() {
           </div>
         </div>
 
-        {/* Voice Chat Component */}
-        <VoiceChat onVoiceMessage={handleVoiceMessage} isLoading={loading} />
-
-        {/* Info */}
-        <div className="mt-4 sm:mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-            <MessageSquare className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5 self-start" />
-            <div>
-              <h3 className="font-medium text-blue-900 mb-1">About this chat</h3>
-              <p className="text-blue-700 text-sm">
-                This AI agent responds based on your uploaded training documents. The confidence score
-                indicates how well the response matches your training data. For best results, upload
-                comprehensive documentation about your products, services, and FAQs.
-              </p>
-              <p className="text-blue-700 text-sm mt-2">
-                <strong>Voice Features:</strong> Use the microphone button to speak your questions in Bangla,
-                and enable voice output to hear responses. Make sure your browser supports speech recognition.
-              </p>
-            </div>
-          </div>
+        {/* Voice Chat Component - Simple Icon Only */}
+        <div className="mt-4 flex justify-center">
+          <VoiceChat
+            onVoiceMessage={handleVoiceMessage}
+            isLoading={loading}
+            onVoiceModeChange={setIsVoiceMode}
+          />
         </div>
       </div>
     </div>

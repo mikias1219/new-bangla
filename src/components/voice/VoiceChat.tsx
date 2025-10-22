@@ -7,9 +7,10 @@ import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognitio
 interface VoiceChatProps {
   onVoiceMessage: (message: string) => void;
   isLoading: boolean;
+  onVoiceModeChange?: (isVoiceMode: boolean) => void;
 }
 
-export default function VoiceChat({ onVoiceMessage, isLoading }: VoiceChatProps) {
+export default function VoiceChat({ onVoiceMessage, isLoading, onVoiceModeChange }: VoiceChatProps) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -39,6 +40,7 @@ export default function VoiceChat({ onVoiceMessage, isLoading }: VoiceChatProps)
     }
 
     setIsListening(true);
+    onVoiceModeChange?.(true);
     resetTranscript();
     SpeechRecognition.startListening({
       continuous: true,
@@ -48,6 +50,7 @@ export default function VoiceChat({ onVoiceMessage, isLoading }: VoiceChatProps)
 
   const stopListening = () => {
     setIsListening(false);
+    onVoiceModeChange?.(false);
     SpeechRecognition.stopListening();
 
     if (transcript.trim()) {
@@ -122,60 +125,18 @@ export default function VoiceChat({ onVoiceMessage, isLoading }: VoiceChatProps)
   }
 
   return (
-    <div className="flex items-center gap-4 p-4 border-t border-gray-200 bg-gray-50">
-      {/* Voice Input */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={isListening ? stopListening : startListening}
-          disabled={isLoading}
-          className={`p-3 rounded-full transition-colors ${
-            isListening
-              ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
-              : 'bg-blue-500 hover:bg-blue-600 text-white'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
-          title={isListening ? "Stop listening" : "Start voice input"}
-        >
-          {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-        </button>
-
-        {transcript && (
-          <div className="text-sm text-gray-600 max-w-xs">
-            <span className="font-medium">Listening:</span> {transcript}
-          </div>
-        )}
-      </div>
-
-      {/* Voice Output */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={toggleVoice}
-          className={`p-2 rounded-lg transition-colors ${
-            voiceEnabled
-              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-          }`}
-          title={voiceEnabled ? "Disable voice output" : "Enable voice output"}
-        >
-          {voiceEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-        </button>
-
-        {isSpeaking && (
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce"></div>
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-            <span className="text-sm text-green-600 ml-1">Speaking...</span>
-          </div>
-        )}
-      </div>
-
-      {/* Status */}
-      <div className="text-xs text-gray-500 ml-auto">
-        {isListening && "🎤 Listening..."}
-        {isSpeaking && "🔊 Speaking..."}
-        {!isListening && !isSpeaking && "Ready for voice input"}
-      </div>
-    </div>
+    <button
+      onClick={isListening ? stopListening : startListening}
+      disabled={isLoading}
+      className={`p-3 rounded-full transition-all duration-200 ${
+        isListening
+          ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse shadow-lg'
+          : 'bg-blue-500 hover:bg-blue-600 text-white shadow-md hover:shadow-lg'
+      } disabled:opacity-50 disabled:cursor-not-allowed`}
+      title={isListening ? "Stop recording and send message" : "Start voice recording"}
+    >
+      {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+    </button>
   );
 }
 
