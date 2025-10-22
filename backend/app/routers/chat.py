@@ -61,17 +61,22 @@ async def send_message(
     db: Session = Depends(get_db)
 ):
     """Send a message to an AI agent"""
-    # Verify agent belongs to user's organization
-    agent = db.query(AIAgent).filter(
-        AIAgent.id == agent_id,
-        AIAgent.organization_id == current_user.organization_id
-    ).first()
+    # Verify agent exists and user has permission (admins can access any agent)
+    if current_user.is_superuser:
+        # Admin can access any agent
+        agent = db.query(AIAgent).filter(AIAgent.id == agent_id).first()
+    else:
+        # Regular users can only access agents from their organization
+        agent = db.query(AIAgent).filter(
+            AIAgent.id == agent_id,
+            AIAgent.organization_id == current_user.organization_id
+        ).first()
 
     if not agent:
         raise HTTPException(status_code=404, detail="AI agent not found")
 
-    # Check usage limits
-    if current_user.organization.current_monthly_chats >= current_user.organization.max_monthly_chats:
+    # Check usage limits (admins are not limited)
+    if not current_user.is_superuser and current_user.organization.current_monthly_chats >= current_user.organization.max_monthly_chats:
         raise HTTPException(
             status_code=429,
             detail="Monthly chat limit exceeded. Please upgrade your plan."
@@ -97,9 +102,10 @@ async def send_message(
     if response is None:
         raise HTTPException(status_code=500, detail="Failed to process message")
 
-    # Update usage counter
-    current_user.organization.current_monthly_chats += 1
-    db.commit()
+    # Update usage counter (admins don't count towards limits)
+    if not current_user.is_superuser:
+        current_user.organization.current_monthly_chats += 1
+        db.commit()
 
     # Get confidence score from the last AI message
     confidence_score = None
