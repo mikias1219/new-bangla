@@ -734,7 +734,7 @@ function AnalyticsDashboard({ stats }: { stats: AdminStats | null }) {
               <Bot className="w-8 h-8 text-purple-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-purple-600">Total Agents</p>
-                <p className="text-2xl font-bold text-purple-900">{stats.ai_agents.total_agents}</p>
+                <p className="text-2xl font-bold text-purple-900">{stats?.ai_agents?.total_agents || 0}</p>
               </div>
             </div>
           </div>

@@ -50,10 +50,19 @@ class SystemStats(BaseModel):
     average_session_duration: float
     user_satisfaction_rate: float
 
+class AIAgentStats(BaseModel):
+    total_agents: int
+    active_agents: int
+    total_conversations: int
+    average_confidence: float
+    escalated_conversations: int
+    platform_breakdown: dict
+
 class AdminStats(BaseModel):
     users: UserStats
     subscriptions: SubscriptionStats
     system: SystemStats
+    ai_agents: AIAgentStats
 
 class UserManagementResponse(BaseModel):
     id: int
@@ -117,6 +126,23 @@ async def get_admin_stats(
     average_session_duration = 0.0
     user_satisfaction_rate = 0.0
 
+    # AI Agents stats
+    total_agents = db.query(AIAgent).count()
+    active_agents = db.query(AIAgent).filter(AIAgent.is_active == True).count()
+
+    # AI Agents conversations (placeholder for now)
+    ai_total_conversations = db.query(Conversation).count() if hasattr(db.query(Conversation), 'count') else 0
+    ai_average_confidence = 0.0  # Would need message confidence scores
+    ai_escalated_conversations = 0  # Would need escalation tracking
+
+    # Platform breakdown
+    platform_breakdown = {
+        "web": db.query(AIAgent).filter(AIAgent.whatsapp_enabled == False, AIAgent.facebook_enabled == False).count(),
+        "whatsapp": db.query(AIAgent).filter(AIAgent.whatsapp_enabled == True).count(),
+        "facebook": db.query(AIAgent).filter(AIAgent.facebook_enabled == True).count(),
+        "instagram": 0  # Placeholder for future Instagram integration
+    }
+
     return AdminStats(
         users=UserStats(
             total_users=total_users,
@@ -137,6 +163,14 @@ async def get_admin_stats(
             total_messages=total_messages,
             average_session_duration=average_session_duration,
             user_satisfaction_rate=user_satisfaction_rate
+        ),
+        ai_agents=AIAgentStats(
+            total_agents=total_agents,
+            active_agents=active_agents,
+            total_conversations=ai_total_conversations,
+            average_confidence=ai_average_confidence,
+            escalated_conversations=ai_escalated_conversations,
+            platform_breakdown=platform_breakdown
         )
     )
 
