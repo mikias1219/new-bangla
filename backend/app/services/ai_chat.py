@@ -108,7 +108,8 @@ class AIChatService:
         except Exception as e:
             logger.error(f"Error sending message: {str(e)}")
             db.rollback()
-            return "I'm sorry, I encountered an error processing your message. Please try again."
+            # Temporary debug info
+            return f"DEBUG: Error processing message. Exception: {str(e)}. Agent: {agent.name if 'agent' in locals() else 'Unknown'}"
 
     def _generate_response(self, user_message: str, context: str, agent: AIAgent) -> str:
         """Generate AI response using OpenAI with context"""
