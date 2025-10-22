@@ -16,15 +16,12 @@ def add_total_messages_column():
 
     try:
         with engine.connect() as conn:
-            # Check if column already exists
-            result = conn.execute(text("""
-                SELECT column_name
-                FROM information_schema.columns
-                WHERE table_name = 'conversations'
-                AND column_name = 'total_messages'
-            """))
+            # Check if column already exists (SQLite way)
+            result = conn.execute(text("PRAGMA table_info(conversations)"))
+            columns = result.fetchall()
+            column_names = [col[1] for col in columns]  # col[1] is the column name
 
-            if result.fetchone():
+            if 'total_messages' in column_names:
                 print("✅ total_messages column already exists")
                 return True
 
