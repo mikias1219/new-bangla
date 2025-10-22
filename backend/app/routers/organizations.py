@@ -125,7 +125,11 @@ async def get_my_organization(
     db: Session = Depends(get_db)
 ):
     """Get current user's organization"""
-    return current_user.organization
+    # Explicitly load the organization to avoid DetachedInstanceError
+    organization = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
+    if not organization:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return organization
 
 @router.put("/my", response_model=OrganizationResponse)
 async def update_my_organization(
@@ -134,7 +138,10 @@ async def update_my_organization(
     db: Session = Depends(get_db)
 ):
     """Update organization (owner only)"""
-    org = current_user.organization
+    # Explicitly load the organization to avoid DetachedInstanceError
+    org = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
 
     if org_data.name:
         org.name = org_data.name
