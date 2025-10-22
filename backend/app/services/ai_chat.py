@@ -62,6 +62,8 @@ class AIChatService:
                 context += f"\n\nReal-time data: {crm_context}"
 
             # Generate AI response
+            print(f"DEBUG: Context length: {len(context)}, Context preview: {context[:100]}")
+            print(f"DEBUG: Agent name: {agent.name}, system_prompt length: {len(agent.system_prompt)}")
             ai_response = self._generate_response(message_text, context, agent)
 
             # Create AI message record
@@ -113,6 +115,8 @@ class AIChatService:
     def _generate_response(self, user_message: str, context: str, agent: AIAgent) -> str:
         """Generate AI response using OpenAI with context"""
         try:
+            print(f"DEBUG: _generate_response called with user_message: {user_message[:50]}...")
+            print(f"DEBUG: context check: {context == 'This is a general AI assistant. No specific training documents have been uploaded yet.'}")
             # Build system prompt with Bangla language requirement
             if context == "This is a general AI assistant. No specific training documents have been uploaded yet.":
                 # Generic AI assistant prompt when no training documents
