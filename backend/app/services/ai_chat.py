@@ -62,8 +62,6 @@ class AIChatService:
                 context += f"\n\nReal-time data: {crm_context}"
 
             # Generate AI response
-            print(f"DEBUG: Context length: {len(context)}, Context preview: {context[:100]}")
-            print(f"DEBUG: Agent name: {agent.name}, system_prompt length: {len(agent.system_prompt)}")
             ai_response = self._generate_response(message_text, context, agent)
 
             # Create AI message record
@@ -115,14 +113,13 @@ class AIChatService:
     def _generate_response(self, user_message: str, context: str, agent: AIAgent) -> str:
         """Generate AI response using OpenAI with context"""
         try:
-            print(f"DEBUG: _generate_response called with user_message: {user_message[:50]}...")
-            print(f"DEBUG: context check: {context == 'This is a general AI assistant. No specific training documents have been uploaded yet.'}")
             # Build system prompt with Bangla language requirement
             if context == "This is a general AI assistant. No specific training documents have been uploaded yet.":
                 # Generic AI assistant prompt when no training documents
+                agent_prompt = agent.system_prompt or "You are a helpful AI assistant."
                 system_prompt = f"""You are {agent.name}, a helpful AI assistant for {agent.organization.name}.
 
-{agent.system_prompt}
+{agent_prompt}
 
 CRITICAL LANGUAGE REQUIREMENT: You MUST respond exclusively in Bangla (Bengali) language. All your responses must be in proper Bangla script. Do not switch to English unless the user explicitly requests it.
 
@@ -138,9 +135,10 @@ Guidelines:
 - Maintain a friendly and professional tone in Bangla"""
             else:
                 # Standard prompt with training context
+                agent_prompt = agent.system_prompt or "You are a helpful AI assistant."
                 system_prompt = f"""You are {agent.name}, an AI assistant for {agent.organization.name}.
 
-{agent.system_prompt}
+{agent_prompt}
 
 CRITICAL LANGUAGE REQUIREMENT: You MUST respond exclusively in Bangla (Bengali) language. All your responses must be in proper Bangla script. Do not switch to English unless the user explicitly requests it.
 
