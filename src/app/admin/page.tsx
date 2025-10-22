@@ -1313,7 +1313,7 @@ function TestAIAgents({
                 </div>
 
                 <div className="text-xs text-gray-500">
-                  Recording: {recordedVoiceText ? 'Ready' : 'None'}
+                  Recording: {isRecordingVoice ? 'Recording...' : recordedVoiceText ? 'Ready to Send' : 'None'}
                 </div>
               </div>
 
