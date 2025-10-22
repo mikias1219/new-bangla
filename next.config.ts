@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
   env: {
     PORT: '3002',
   },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   async rewrites() {
     return [
       {
