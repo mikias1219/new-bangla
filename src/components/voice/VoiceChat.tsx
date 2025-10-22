@@ -8,9 +8,10 @@ interface VoiceChatProps {
   onVoiceMessage: (message: string) => void;
   isLoading: boolean;
   onVoiceModeChange?: (isVoiceMode: boolean) => void;
+  voiceResponseEnabled?: boolean;
 }
 
-export default function VoiceChat({ onVoiceMessage, isLoading, onVoiceModeChange }: VoiceChatProps) {
+export default function VoiceChat({ onVoiceMessage, isLoading, onVoiceModeChange, voiceResponseEnabled = false }: VoiceChatProps) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -157,14 +158,14 @@ export default function VoiceChat({ onVoiceMessage, isLoading, onVoiceModeChange
   // Auto-speak AI responses (this would be called from parent component)
   useEffect(() => {
     const handleAiResponse = (event: CustomEvent) => {
-      if (voiceEnabled) {
+      if (voiceResponseEnabled) {
         speakText(event.detail);
       }
     };
 
     window.addEventListener('aiResponse', handleAiResponse as EventListener);
     return () => window.removeEventListener('aiResponse', handleAiResponse as EventListener);
-  }, [voiceEnabled, speakText]);
+  }, [voiceResponseEnabled, speakText]);
 
   if (!browserSupportsSpeechRecognition) {
     return (

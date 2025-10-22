@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Bot, User, ArrowLeft, MessageSquare } from "lucide-react";
+import { Send, Bot, User, ArrowLeft, MessageSquare, Mic, MicOff, Volume2, VolumeX, Settings } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import VoiceChat, { speakAiResponse } from "@/components/voice/VoiceChat";
 
@@ -29,6 +29,9 @@ function ChatPageContent() {
   const [agent, setAgent] = useState<AIAgent | null>(null);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [voiceResponseEnabled, setVoiceResponseEnabled] = useState(false);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordedVoiceText, setRecordedVoiceText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -116,9 +119,10 @@ function ChatPageContent() {
         setMessages(prev => [...prev, userMessage, aiMessage]);
         setConversationId(data.conversation_id);
         setNewMessage("");
+        setRecordedVoiceText(""); // Clear recorded voice text too
 
-        // Speak the AI response
-        if (data.response) {
+        // Speak the AI response only if user has enabled voice responses
+        if (data.response && voiceResponseEnabled) {
           speakAiResponse(data.response);
         }
       } else {
@@ -134,12 +138,32 @@ function ChatPageContent() {
   };
 
   const handleVoiceMessage = (voiceMessage: string) => {
-    // Set the voice message as the new message and send it
-    setNewMessage(voiceMessage);
-    setIsVoiceMode(false); // Exit voice mode after sending
-    // Send the message immediately
-    const event = { preventDefault: () => {} } as React.FormEvent;
-    sendMessage(event);
+    if (isRecordingVoice) {
+      // Voice recording mode - set as recorded text, don't send automatically
+      setRecordedVoiceText(voiceMessage);
+      setIsRecordingVoice(false);
+      setIsVoiceMode(false);
+    } else {
+      // Voice input mode - send immediately
+      setNewMessage(voiceMessage);
+      setIsVoiceMode(false); // Exit voice mode after sending
+      // Send the message immediately
+      const event = { preventDefault: () => {} } as React.FormEvent;
+      sendMessage(event);
+    }
+  };
+
+  const startVoiceRecording = () => {
+    setIsRecordingVoice(true);
+    setIsVoiceMode(true);
+  };
+
+  const sendRecordedVoice = () => {
+    if (recordedVoiceText.trim()) {
+      setNewMessage(recordedVoiceText);
+      const event = { preventDefault: () => {} } as React.FormEvent;
+      sendMessage(event);
+    }
   };
 
   if (!agent) {
@@ -254,12 +278,68 @@ function ChatPageContent() {
 
           {/* Input */}
           <div className="border-t border-gray-200 p-4">
+            {/* Voice Response Toggle */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setVoiceResponseEnabled(!voiceResponseEnabled)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    voiceResponseEnabled
+                      ? 'bg-green-100 text-green-800 border border-green-300'
+                      : 'bg-gray-100 text-gray-600 border border-gray-300'
+                  }`}
+                >
+                  {voiceResponseEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                  Voice Responses
+                </button>
+
+                {/* Voice Recording */}
+                <button
+                  onClick={startVoiceRecording}
+                  disabled={loading || isVoiceMode}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isRecordingVoice
+                      ? 'bg-red-100 text-red-800 border border-red-300 animate-pulse'
+                      : 'bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title="Record voice message"
+                >
+                  <Mic className="w-4 h-4" />
+                  Record
+                </button>
+              </div>
+
+              <div className="text-xs text-gray-500">
+                Voice: {voiceResponseEnabled ? 'On' : 'Off'} | Recording: {recordedVoiceText ? 'Ready' : 'None'}
+              </div>
+            </div>
+
+            {/* Recorded Voice Preview */}
+            {recordedVoiceText && (
+              <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-blue-900">Recorded Voice:</span>
+                  <button
+                    onClick={sendRecordedVoice}
+                    className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                  >
+                    Send Recording
+                  </button>
+                </div>
+                <p className="text-sm text-blue-800">{recordedVoiceText}</p>
+              </div>
+            )}
+
             <form onSubmit={sendMessage} className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder={isVoiceMode ? "Voice mode active - use microphone..." : `Ask ${agent.name} a question...`}
+                placeholder={
+                  isVoiceMode
+                    ? (isRecordingVoice ? "Recording voice..." : "Voice input active...")
+                    : `Ask ${agent.name} a question...`
+                }
                 className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base disabled:bg-gray-100 disabled:cursor-not-allowed"
                 disabled={loading || isVoiceMode}
               />
@@ -281,6 +361,7 @@ function ChatPageContent() {
             onVoiceMessage={handleVoiceMessage}
             isLoading={loading}
             onVoiceModeChange={setIsVoiceMode}
+            voiceResponseEnabled={voiceResponseEnabled}
           />
         </div>
       </div>
