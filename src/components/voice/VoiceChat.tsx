@@ -69,6 +69,7 @@ export default function VoiceChat({ onVoiceMessage, isLoading, onVoiceModeChange
     onVoiceModeChange?.(false);
     SpeechRecognition.stopListening();
 
+    // Don't automatically send - let parent component handle this
     if (transcript.trim()) {
       onVoiceMessage(transcript.trim());
     }

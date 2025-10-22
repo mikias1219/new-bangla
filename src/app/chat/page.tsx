@@ -33,6 +33,7 @@ function ChatPageContent() {
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [recordedVoiceText, setRecordedVoiceText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const agentId = searchParams.get("agent");
@@ -79,7 +80,10 @@ function ChatPageContent() {
     if (!newMessage.trim() || loading) return;
 
     const messageToSend = newMessage.trim();
-    setNewMessage(""); // Clear immediately for better UX
+    setNewMessage(""); // Clear state
+    if (inputRef.current) {
+      inputRef.current.value = ""; // Clear input field immediately
+    }
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -147,8 +151,7 @@ function ChatPageContent() {
     if (isRecordingVoice) {
       // Voice recording mode - set as recorded text, don't send automatically
       setRecordedVoiceText(voiceMessage);
-      setIsRecordingVoice(false);
-      setIsVoiceMode(false);
+      // Don't auto-stop here, let user control when to stop
     } else {
       // Voice input mode - send immediately
       setNewMessage(voiceMessage);
@@ -162,11 +165,18 @@ function ChatPageContent() {
   const startVoiceRecording = () => {
     setIsRecordingVoice(true);
     setIsVoiceMode(true);
+    setRecordedVoiceText(""); // Clear previous recording
+  };
+
+  const stopVoiceRecording = () => {
+    setIsRecordingVoice(false);
+    setIsVoiceMode(false);
   };
 
   const sendRecordedVoice = () => {
     if (recordedVoiceText.trim()) {
       setNewMessage(recordedVoiceText);
+      setRecordedVoiceText(""); // Clear after sending
       const event = { preventDefault: () => {} } as React.FormEvent;
       sendMessage(event);
     }
@@ -299,20 +309,25 @@ function ChatPageContent() {
                   Voice Responses
                 </button>
 
-                {/* Voice Recording */}
-                <button
-                  onClick={startVoiceRecording}
-                  disabled={loading || isVoiceMode}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isRecordingVoice
-                      ? 'bg-red-100 text-red-800 border border-red-300 animate-pulse'
-                      : 'bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  title="Record voice message"
-                >
-                  <Mic className="w-4 h-4" />
-                  Record
-                </button>
+                {/* Voice Recording Controls */}
+                {isRecordingVoice ? (
+                  <button
+                    onClick={stopVoiceRecording}
+                    className="p-2 rounded-lg bg-red-100 text-red-600 border border-red-300 animate-pulse"
+                    title="Stop recording"
+                  >
+                    <MicOff className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={startVoiceRecording}
+                    disabled={loading || isVoiceMode}
+                    className="p-2 rounded-lg bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Start voice recording"
+                  >
+                    <Mic className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
               <div className="text-xs text-gray-500">
@@ -339,6 +354,7 @@ function ChatPageContent() {
             <form onSubmit={sendMessage} className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1 relative">
                 <input
+                  ref={inputRef}
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
