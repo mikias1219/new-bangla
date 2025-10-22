@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Bot, User, ArrowLeft, MessageSquare } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -21,7 +21,7 @@ interface AIAgent {
   training_status: string;
 }
 
-export default function ChatPage() {
+function ChatPageContent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -274,6 +274,21 @@ export default function ChatPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading chat...</p>
+        </div>
+      </div>
+    }>
+      <ChatPageContent />
+    </Suspense>
   );
 }
 
