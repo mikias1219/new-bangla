@@ -8,8 +8,8 @@ from datetime import datetime, timedelta
 from ..database import SessionLocal
 from ..models import (
     User, Subscription, SubscriptionPlan, SubscriptionStatus,
-    Organization, AIAgent, Conversation, Message
-), Payment
+    Organization, AIAgent, Conversation, Message, Payment
+)
 from ..auth.jwt import get_current_user, JWTBearer
 
 router = APIRouter()
