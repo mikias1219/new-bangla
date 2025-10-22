@@ -277,7 +277,5 @@ export default function ChatPage() {
   );
 }
 
-export default ChatPage;
-
 // Force dynamic rendering to avoid SSR issues with useSearchParams
 export const dynamic = 'force-dynamic';
