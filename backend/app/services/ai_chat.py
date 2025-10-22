@@ -113,6 +113,9 @@ class AIChatService:
     def _generate_response(self, user_message: str, context: str, agent: AIAgent) -> str:
         """Generate AI response using OpenAI with context"""
         try:
+            print(f"DEBUG: _generate_response called with context length: {len(context)}")
+            print(f"DEBUG: agent.system_prompt exists: {agent.system_prompt is not None}")
+            print(f"DEBUG: agent.system_prompt length: {len(agent.system_prompt) if agent.system_prompt else 0}")
             # Build system prompt with Bangla language requirement
             if context == "This is a general AI assistant. No specific training documents have been uploaded yet.":
                 # Generic AI assistant prompt when no training documents
@@ -155,6 +158,9 @@ Guidelines:
 - Maintain a friendly and professional tone in Bangla"""
 
             # Call OpenAI API
+            print(f"DEBUG: Calling OpenAI API with model: {self.model}")
+            print(f"DEBUG: System prompt length: {len(system_prompt)}")
+            print(f"DEBUG: User message: {user_message}")
             response = self.openai_client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -164,6 +170,7 @@ Guidelines:
                 max_tokens=agent.max_tokens or 1000,
                 temperature=agent.temperature or 0.7
             )
+            print(f"DEBUG: OpenAI API call successful")
 
             return response.choices[0].message.content.strip()
 
