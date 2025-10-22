@@ -213,17 +213,17 @@ export default function DashboardPage() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-gray-900">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center h-auto sm:h-16 gap-2 py-4 sm:py-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
               {organization?.name || "Dashboard"}
             </h1>
-            <div className="flex items-center gap-4">
-              <span className="text-gray-600">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <span className="text-gray-600 text-sm sm:text-base">
                 Plan: <span className="font-semibold capitalize">{organization?.plan}</span>
               </span>
               <button
                 onClick={() => router.push("/")}
-                className="text-gray-600 hover:text-gray-900"
+                className="text-gray-600 hover:text-gray-900 text-sm sm:text-base"
               >
                 ← Back to Home
               </button>
@@ -288,7 +288,7 @@ export default function DashboardPage() {
         {/* Navigation Tabs */}
         <div className="bg-white rounded-lg shadow mb-8">
           <div className="border-b border-gray-200">
-            <nav className="flex">
+            <nav className="flex overflow-x-auto">
               {[
                 { id: "agents", label: "AI Agents", icon: Bot },
                 { id: "documents", label: "Training Data", icon: FileText },
@@ -299,7 +299,7 @@ export default function DashboardPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                  className={`flex items-center gap-2 px-4 sm:px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap min-w-max ${
                     activeTab === tab.id
                       ? "border-blue-500 text-blue-600"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -316,11 +316,11 @@ export default function DashboardPage() {
             {/* AI Agents Tab */}
             {activeTab === "agents" && (
               <div>
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
                   <h2 className="text-xl font-semibold text-gray-900">AI Agents</h2>
                   <button
                     onClick={createAIAgent}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                    className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 w-full sm:w-auto"
                   >
                     <Plus className="w-4 h-4" />
                     Create Agent
@@ -361,7 +361,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <button
                           onClick={() => testAgent(agent.id)}
                           className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700"
@@ -369,7 +369,7 @@ export default function DashboardPage() {
                           <MessageSquare className="w-4 h-4" />
                           Test Chat
                         </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600">
+                        <button className="p-2 text-gray-400 hover:text-gray-600 self-center sm:self-auto">
                           <Settings className="w-4 h-4" />
                         </button>
                       </div>

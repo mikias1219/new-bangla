@@ -156,38 +156,39 @@ function ChatPageContent() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => router.push("/dashboard")}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Dashboard
-              </button>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between h-auto sm:h-16 gap-4 py-4 sm:py-0">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 self-start"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
+              <span className="sm:hidden">Back</span>
+            </button>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex items-center gap-3">
-                <Bot className="w-8 h-8 text-blue-600" />
-                <div>
-                  <h1 className="text-lg font-semibold text-gray-900">{agent.name}</h1>
-                  <p className="text-sm text-gray-600">{agent.description}</p>
+                <Bot className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{agent.name}</h1>
+                  <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">{agent.description}</p>
                 </div>
-                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                  agent.training_status === "trained"
-                    ? "bg-green-100 text-green-800"
-                    : agent.training_status === "training"
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "bg-red-100 text-red-800"
-                }`}>
-                  {agent.training_status}
-                </span>
               </div>
+              <span className={`px-2 py-1 rounded text-xs font-medium self-start sm:self-auto ${
+                agent.training_status === "trained"
+                  ? "bg-green-100 text-green-800"
+                  : agent.training_status === "training"
+                  ? "bg-yellow-100 text-yellow-800"
+                  : "bg-red-100 text-red-800"
+              }`}>
+                {agent.training_status}
+              </span>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-lg h-[600px] flex flex-col">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="bg-white rounded-lg shadow-lg h-[500px] sm:h-[600px] flex flex-col">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 && (
@@ -251,22 +252,22 @@ function ChatPageContent() {
 
           {/* Input */}
           <div className="border-t border-gray-200 p-4">
-            <form onSubmit={sendMessage} className="flex gap-2">
+            <form onSubmit={sendMessage} className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder={`Ask ${agent.name} a question...`}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                 disabled={loading}
               />
               <button
                 type="submit"
                 disabled={!newMessage.trim() || loading}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[80px] sm:min-w-0"
               >
                 <Send className="w-4 h-4" />
-                Send
+                <span className="hidden sm:inline">Send</span>
               </button>
             </form>
           </div>
@@ -276,9 +277,9 @@ function ChatPageContent() {
         <VoiceChat onVoiceMessage={handleVoiceMessage} isLoading={loading} />
 
         {/* Info */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <MessageSquare className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+        <div className="mt-4 sm:mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+            <MessageSquare className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5 self-start" />
             <div>
               <h3 className="font-medium text-blue-900 mb-1">About this chat</h3>
               <p className="text-blue-700 text-sm">
