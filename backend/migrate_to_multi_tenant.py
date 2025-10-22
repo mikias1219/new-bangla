@@ -108,7 +108,7 @@ def migrate_database():
                 'org_id': platform_org_id,
                 'email': 'admin@bdchatpro.com',
                 'username': 'admin',
-                'password': get_password_hash('admin123!@#'),
+                'password': get_password_hash('admin123'),
                 'full_name': 'Platform Administrator',
                 'is_active': True,
                 'is_superuser': True,

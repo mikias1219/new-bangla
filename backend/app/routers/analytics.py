@@ -296,7 +296,7 @@ async def get_usage_summary(
                 "max_monthly_chats": org.max_monthly_chats
             },
             "usage_percent": {
-                "chats": org.max_monthly_chats > 0 ? (org.current_monthly_chats / org.max_monthly_chats) * 100 : 0
+                "chats": (org.current_monthly_chats / org.max_monthly_chats) * 100 if org.max_monthly_chats > 0 else 0
             }
         }
 
