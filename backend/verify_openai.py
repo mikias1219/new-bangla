@@ -132,7 +132,11 @@ def test_performance():
                 return False
 
         avg_response_time = sum(response_times) / len(response_times)
-        print(".2f"        print(".2f"        print(".2f"        print(".2f"
+        print(f"   Average response time: {avg_response_time:.2f}s")
+        print(f"   Min response time: {min(response_times):.2f}s")
+        print(f"   Max response time: {max(response_times):.2f}s")
+        print(f"   Total requests: {len(response_times)}")
+
         # Performance thresholds
         if avg_response_time < 2.0:
             print("✅ Excellent performance")
@@ -205,8 +209,7 @@ def main():
             passed += 1
         print("-" * 40)
 
-    print("
-📊 Test Results:")
+    print(f"\n📊 Test Results:")
     print(f"   ✅ Passed: {passed}/{total}")
     print(f"   ❌ Failed: {total - passed}/{total}")
 

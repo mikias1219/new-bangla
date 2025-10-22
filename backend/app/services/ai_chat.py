@@ -52,6 +52,9 @@ class AIChatService:
             if relevant_chunks:
                 context_parts = [chunk['text'] for chunk in relevant_chunks]
                 context = "\n\n".join(context_parts)
+            else:
+                # If no trained documents, provide generic helpful context
+                context = "This is a general AI assistant. No specific training documents have been uploaded yet."
 
             # Add real-time CRM/ERP data if available and configured
             crm_context = self._get_crm_context(message_text, conversation.organization, db)
@@ -111,7 +114,27 @@ class AIChatService:
         """Generate AI response using OpenAI with context"""
         try:
             # Build system prompt with Bangla language requirement
-            system_prompt = f"""You are {agent.name}, an AI assistant for {agent.organization.name}.
+            if context == "This is a general AI assistant. No specific training documents have been uploaded yet.":
+                # Generic AI assistant prompt when no training documents
+                system_prompt = f"""You are {agent.name}, a helpful AI assistant for {agent.organization.name}.
+
+{agent.system_prompt}
+
+CRITICAL LANGUAGE REQUIREMENT: You MUST respond exclusively in Bangla (Bengali) language. All your responses must be in proper Bangla script. Do not switch to English unless the user explicitly requests it.
+
+Since no specific training documents have been uploaded yet, you should provide general helpful assistance and guide users on how to get the most out of this AI assistant.
+
+Guidelines:
+- Be helpful, professional, and friendly
+- ALWAYS respond in Bangla language (বাংলা)
+- Provide general assistance and answer common questions
+- Mention that more specific help will be available once training documents are uploaded
+- Keep responses concise but informative
+- Ask clarifying questions when needed, in Bangla
+- Maintain a friendly and professional tone in Bangla"""
+            else:
+                # Standard prompt with training context
+                system_prompt = f"""You are {agent.name}, an AI assistant for {agent.organization.name}.
 
 {agent.system_prompt}
 
