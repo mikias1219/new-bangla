@@ -412,22 +412,53 @@ async def test_openai_directly(
     """Test OpenAI integration directly without specific agent (admin only)"""
     try:
         from ..services.ai_chat import AIChatService
+        from ..models import Organization, AIAgent
         ai_service = AIChatService()
 
-        # Create a temporary conversation for testing
-        from ..models import Conversation
-        temp_conversation = Conversation(
-            platform="admin_test",
-            status="active"
+        # Create temporary organization and agent for testing
+        temp_org = Organization(
+            name="Admin Test Org",
+            domain="admin-test",
+            description="Temporary organization for admin testing",
+            plan="starter",
+            status="active",
+            max_users=1,
+            max_ai_agents=1,
+            max_monthly_chats=100,
+            current_monthly_chats=0
         )
-        db.add(temp_conversation)
+        db.add(temp_org)
         db.commit()
 
-        # Send the message
-        response = ai_service.send_message(temp_conversation.id, message, db)
+        temp_agent = AIAgent(
+            organization_id=temp_org.id,
+            name="Admin Test Agent",
+            description="Temporary agent for admin testing",
+            system_prompt=system_prompt,
+            training_status="trained",
+            is_active=True
+        )
+        db.add(temp_agent)
+        db.commit()
 
-        # Clean up the temporary conversation
-        db.delete(temp_conversation)
+        # Create conversation using the AI chat service
+        conversation_id = ai_service.create_conversation(
+            agent_id=temp_agent.id,
+            platform="admin_test",
+            user_name="Admin Tester",
+            user_email=current_user.email,
+            db=db
+        )
+
+        if not conversation_id:
+            raise HTTPException(status_code=500, detail="Failed to create test conversation")
+
+        # Send the message
+        response = ai_service.send_message(conversation_id, message, db)
+
+        # Clean up temporary data
+        db.delete(temp_agent)
+        db.delete(temp_org)
         db.commit()
 
         if response:

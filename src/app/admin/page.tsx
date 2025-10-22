@@ -19,7 +19,8 @@ import {
   Play,
   Mic,
   MicOff,
-  Volume2
+  Volume2,
+  Plus
 } from "lucide-react";
 import VoiceChat, { speakAiResponse } from "@/components/voice/VoiceChat";
 
