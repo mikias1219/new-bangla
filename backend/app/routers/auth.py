@@ -48,9 +48,29 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
     if db_username:
         raise HTTPException(status_code=400, detail="Username already taken")
 
+    # Get or create default organization
+    from ..models import Organization, OrganizationPlan, OrganizationStatus
+    default_org = db.query(Organization).filter(Organization.domain == "default").first()
+    if not default_org:
+        default_org = Organization(
+            name="Default Organization",
+            domain="default",
+            description="Default organization for registered users",
+            plan=OrganizationPlan.FREE,
+            status=OrganizationStatus.ACTIVE,
+            max_users=1000,
+            max_ai_agents=10,
+            max_monthly_chats=10000,
+            is_active=True
+        )
+        db.add(default_org)
+        db.commit()
+        db.refresh(default_org)
+
     # Create new user
     hashed_password = get_password_hash(user.password)
     db_user = User(
+        organization_id=default_org.id,
         email=user.email,
         username=user.username,
         hashed_password=hashed_password,
