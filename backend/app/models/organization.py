@@ -170,6 +170,9 @@ class Conversation(Base):
     escalated_to_human = Column(Boolean, default=False)
     human_agent_assigned = Column(String)  # Name/email of assigned human agent
 
+    # Usage tracking
+    total_messages = Column(Integer, default=0)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
