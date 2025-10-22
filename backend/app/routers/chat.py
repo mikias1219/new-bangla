@@ -27,6 +27,11 @@ class SendMessageResponse(BaseModel):
     conversation_id: int
     confidence_score: Optional[float] = None
 
+class SatisfactionRatingRequest(BaseModel):
+    message_id: int
+    rating: int  # 1-5 scale
+    feedback: Optional[str] = None
+
 class ConversationResponse(BaseModel):
     id: int
     platform: str
@@ -45,6 +50,8 @@ class MessageResponse(BaseModel):
     sender_name: Optional[str]
     created_at: str
     confidence_score: Optional[float]
+    satisfaction_rating: Optional[int]
+    rating_feedback: Optional[str]
 
 @router.post("/agents/{agent_id}/chat", response_model=SendMessageResponse)
 async def send_message(
@@ -160,7 +167,9 @@ async def get_conversation_messages(
         "sender_type": msg.sender_type,
         "sender_name": msg.sender_name,
         "created_at": msg.created_at.isoformat(),
-        "confidence_score": msg.confidence_score
+        "confidence_score": msg.confidence_score,
+        "satisfaction_rating": msg.satisfaction_rating,
+        "rating_feedback": msg.rating_feedback
     } for msg in messages]
 
 @router.get("/agents/{agent_id}/stats")
@@ -293,3 +302,71 @@ async def facebook_webhook_verification(
         return challenge
     else:
         return {"error": "Verification failed"}
+
+@router.post("/webhooks/instagram")
+async def instagram_webhook(
+    data: dict,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """Handle Instagram webhook messages"""
+    from ..services.instagram_service import InstagramService
+
+    instagram_service = InstagramService()
+    success = instagram_service.process_webhook(data, db)
+
+    if success:
+        return {"status": "ok"}
+    else:
+        return {"status": "error", "message": "Failed to process webhook"}
+
+@router.get("/webhooks/instagram")
+async def instagram_webhook_verification(
+    hub_mode: str,
+    hub_challenge: str,
+    hub_verify_token: str
+):
+    """Verify Instagram webhook"""
+    from ..services.instagram_service import InstagramService
+
+    instagram_service = InstagramService()
+    challenge = instagram_service.verify_webhook(hub_mode, hub_challenge, hub_verify_token)
+
+    if challenge:
+        return challenge
+    else:
+        return {"error": "Verification failed"}
+
+@router.post("/messages/rate")
+async def rate_message_satisfaction(
+    rating_data: SatisfactionRatingRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Submit customer satisfaction rating for an AI message"""
+    # Find the message and verify it belongs to user's organization
+    message = db.query(Message).join(Conversation).filter(
+        Message.id == rating_data.message_id,
+        Conversation.organization_id == current_user.organization_id,
+        Message.sender_type == "ai_agent"  # Only AI messages can be rated
+    ).first()
+
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found or not rateable")
+
+    # Validate rating (1-5 scale)
+    if rating_data.rating < 1 or rating_data.rating > 5:
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
+
+    # Update message with rating
+    message.satisfaction_rating = rating_data.rating
+    message.rating_feedback = rating_data.feedback
+
+    db.commit()
+
+    # Check if rating triggers admin review (rating below 3/5)
+    if rating_data.rating < 3:
+        # Log for admin review (could send notification)
+        logger.warning(f"Low satisfaction rating ({rating_data.rating}/5) for message {message.id} in conversation {message.conversation_id}")
+
+    return {"message": "Rating submitted successfully"}

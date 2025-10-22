@@ -8,6 +8,7 @@ from .database import SessionLocal, engine, Base
 from .models import user, subscription, payment
 from .routers import auth, users, subscriptions, payments, ai_agent, admin, organizations, chat, analytics, billing
 from .auth.jwt import JWTBearer
+from .utils.pii_masking import setup_logging_with_pii_masking
 
 # Create database tables (only if they don't exist)
 try:
@@ -15,6 +16,9 @@ try:
     print("Database tables created successfully")
 except Exception as e:
     print(f"Database tables creation skipped: {e}")
+
+# Setup PII masking in logging
+setup_logging_with_pii_masking()
 
 app = FastAPI(
     title="Bangla Chat Pro API",

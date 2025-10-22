@@ -274,6 +274,7 @@ async def get_ai_agents(
         "description": agent.description,
         "whatsapp_enabled": agent.whatsapp_enabled,
         "facebook_enabled": agent.facebook_enabled,
+        "instagram_enabled": agent.instagram_enabled,
         "total_conversations": agent.total_conversations,
         "training_status": agent.training_status
     } for agent in agents]
@@ -323,4 +324,57 @@ async def configure_facebook_integration(
     db.commit()
 
     return {"message": "Facebook integration configured successfully"}
+
+@router.put("/ai-agents/{agent_id}/integrations/instagram")
+async def configure_instagram_integration(
+    agent_id: int,
+    account_id: str,
+    current_user: User = Depends(require_org_owner),
+    db: Session = Depends(get_db)
+):
+    """Configure Instagram Business Messaging integration for an AI agent"""
+    agent = db.query(AIAgent).filter(
+        AIAgent.id == agent_id,
+        AIAgent.organization_id == current_user.organization_id
+    ).first()
+
+    if not agent:
+        raise HTTPException(status_code=404, detail="AI agent not found")
+
+    agent.instagram_enabled = True
+    agent.instagram_account_id = account_id
+
+    db.commit()
+
+    return {"message": "Instagram integration configured successfully"}
+
+@router.put("/integrations/crm")
+async def configure_crm_integration(
+    api_url: str,
+    api_key: str,
+    api_secret: Optional[str] = None,
+    current_user: User = Depends(require_org_owner),
+    db: Session = Depends(get_db)
+):
+    """Configure CRM/ERP API integration for the organization"""
+    org = current_user.organization
+
+    org.crm_api_url = api_url
+    org.crm_api_key = api_key
+    org.crm_api_secret = api_secret
+    org.crm_integration_enabled = True
+
+    db.commit()
+    db.refresh(org)
+
+    # Test the connection
+    from ..services.api_integration_service import APIIntegrationService
+    crm_service = APIIntegrationService(org)
+    connection_test = crm_service.test_connection()
+
+    return {
+        "message": "CRM integration configured successfully",
+        "connection_test": "passed" if connection_test else "failed",
+        "api_url": api_url
+    }
 

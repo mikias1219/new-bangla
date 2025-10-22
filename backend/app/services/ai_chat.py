@@ -53,6 +53,11 @@ class AIChatService:
                 context_parts = [chunk['text'] for chunk in relevant_chunks]
                 context = "\n\n".join(context_parts)
 
+            # Add real-time CRM/ERP data if available and configured
+            crm_context = self._get_crm_context(message_text, conversation.organization, db)
+            if crm_context:
+                context += f"\n\nReal-time data: {crm_context}"
+
             # Generate AI response
             ai_response = self._generate_response(message_text, context, agent)
 
@@ -67,9 +72,25 @@ class AIChatService:
             )
             db.add(ai_message)
 
-            # Update conversation
+            # Check for human handoff based on confidence score
+            confidence_score = self._calculate_confidence(context, relevant_chunks)
+
+            # Update conversation with confidence tracking
             conversation.last_message_at = datetime.utcnow()
             conversation.total_messages += 2
+
+            # Track unsuccessful responses (low confidence = < 0.5)
+            if confidence_score < 0.5:
+                conversation.unsuccessful_responses += 1
+
+                # Escalate to human after 2 unsuccessful responses
+                if conversation.unsuccessful_responses >= 2 and not conversation.escalated_to_human:
+                    conversation.escalated_to_human = True
+                    conversation.status = "escalated"
+                    ai_response = "আমি আপনার প্রশ্নের সঠিক উত্তর দিতে পারছি না। আমি এখন একজন মানুষের সাথে আপনাকে সংযোগিত করছি। অনুগ্রহ করে অপেক্ষা করুন।\n\n(I cannot provide the correct answer to your question. I am now connecting you with a human agent. Please wait.)"
+            elif confidence_score >= 0.5 and conversation.unsuccessful_responses > 0:
+                # Reset unsuccessful counter if we get a good response
+                conversation.unsuccessful_responses = 0
 
             # Update agent stats
             agent.total_conversations = db.query(Conversation).filter(
@@ -89,20 +110,24 @@ class AIChatService:
     def _generate_response(self, user_message: str, context: str, agent: AIAgent) -> str:
         """Generate AI response using OpenAI with context"""
         try:
-            # Build system prompt
+            # Build system prompt with Bangla language requirement
             system_prompt = f"""You are {agent.name}, an AI assistant for {agent.organization.name}.
 
 {agent.system_prompt}
+
+CRITICAL LANGUAGE REQUIREMENT: You MUST respond exclusively in Bangla (Bengali) language. All your responses must be in proper Bangla script. Do not switch to English unless the user explicitly requests it.
 
 Use the following context from the organization's training documents to provide accurate, helpful responses:
 {context}
 
 Guidelines:
 - Be helpful, professional, and accurate
+- ALWAYS respond in Bangla language (বাংলা)
 - Use the provided context to answer questions
-- If you don't have relevant information in the context, say so politely
+- If you don't have relevant information in the context, say so politely in Bangla
 - Keep responses concise but informative
-- Ask clarifying questions when needed"""
+- Ask clarifying questions when needed, in Bangla
+- Maintain a friendly and professional tone in Bangla"""
 
             # Call OpenAI API
             response = self.openai_client.chat.completions.create(
@@ -131,6 +156,61 @@ Guidelines:
         chunk_count_factor = min(len(relevant_chunks) / 3.0, 1.0)  # Max confidence from 3+ chunks
 
         return min(avg_similarity * chunk_count_factor, 1.0)
+
+    def _get_crm_context(self, message_text: str, organization, db: Session) -> Optional[str]:
+        """Get real-time context from CRM/ERP systems based on user query"""
+        if not organization.crm_integration_enabled or not organization.crm_api_url:
+            return None
+
+        try:
+            from .api_integration_service import APIIntegrationService
+            crm_service = APIIntegrationService(organization)
+
+            context_parts = []
+
+            # Check for order-related queries
+            if any(keyword in message_text.lower() for keyword in ['order', 'অর্ডার', 'order status', 'অর্ডার স্ট্যাটাস']):
+                # Extract order ID patterns (customize based on your order ID format)
+                import re
+                order_matches = re.findall(r'#?(\d{6,})', message_text)
+                if order_matches:
+                    for order_id in order_matches[:1]:  # Limit to first match
+                        order_info = crm_service.get_order_status(order_id)
+                        if order_info:
+                            context_parts.append(f"Order {order_id} status: {order_info}")
+
+            # Check for product queries
+            elif any(keyword in message_text.lower() for keyword in ['product', 'প্রোডাক্ট', 'inventory', 'ইনভেন্টরি', 'stock', 'স্টক']):
+                # Extract product ID or search for products
+                import re
+                product_matches = re.findall(r'#?(\w{3,})', message_text)
+                if product_matches:
+                    for product_id in product_matches[:1]:
+                        product_info = crm_service.get_product_info(product_id)
+                        if product_info:
+                            context_parts.append(f"Product {product_id}: {product_info}")
+
+                        # Also check inventory
+                        inventory_info = crm_service.get_inventory_status(product_id)
+                        if inventory_info:
+                            context_parts.append(f"Inventory for {product_id}: {inventory_info}")
+                else:
+                    # Search for products by name
+                    products = crm_service.search_products(message_text, limit=2)
+                    if products:
+                        context_parts.append(f"Available products: {products}")
+
+            # Check for customer info queries
+            elif any(keyword in message_text.lower() for keyword in ['customer', 'কাস্টমার', 'account', 'একাউন্ট']):
+                # This would typically use conversation context or user identification
+                # For now, we'll skip customer-specific queries to avoid PII issues
+                pass
+
+            return "\n".join(context_parts) if context_parts else None
+
+        except Exception as e:
+            logger.error(f"Error getting CRM context: {str(e)}")
+            return None
 
     def create_conversation(self, agent_id: int, platform: str = "web",
                           user_name: Optional[str] = None, user_phone: Optional[str] = None,

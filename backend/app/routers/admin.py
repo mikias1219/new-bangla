@@ -6,7 +6,10 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from ..database import SessionLocal
-from ..models import User, Subscription, SubscriptionPlan, SubscriptionStatus, Payment
+from ..models import (
+    User, Subscription, SubscriptionPlan, SubscriptionStatus,
+    Organization, AIAgent, Conversation, Message
+), Payment
 from ..auth.jwt import get_current_user, JWTBearer
 
 router = APIRouter()
@@ -244,3 +247,52 @@ async def create_admin_user(
     db.commit()
 
     return {"message": "Admin user created successfully", "user_id": db_user.id}
+
+def require_platform_admin(current_user: User = Depends(require_admin)):
+    """Dependency to ensure user is platform admin"""
+    # For now, all admins are platform admins. In future, we could add role-based permissions
+    return current_user
+
+@router.get("/organizations")
+async def get_all_organizations(
+    current_user: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all organizations (platform admin only)"""
+    organizations = db.query(Organization).all()
+
+    return [{
+        "id": org.id,
+        "name": org.name,
+        "domain": org.domain,
+        "plan": org.plan,
+        "status": org.status,
+        "max_users": org.max_users,
+        "max_ai_agents": org.max_ai_agents,
+        "max_monthly_chats": org.max_monthly_chats,
+        "current_monthly_chats": org.current_monthly_chats,
+        "created_at": org.created_at.isoformat()
+    } for org in organizations]
+
+@router.get("/ai-agents")
+async def get_all_ai_agents(
+    current_user: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all AI agents across all organizations (platform admin only)"""
+    agents = db.query(AIAgent).join(Organization).all()
+
+    return [{
+        "id": agent.id,
+        "name": agent.name,
+        "description": agent.description,
+        "organization_name": agent.organization.name,
+        "whatsapp_enabled": agent.whatsapp_enabled,
+        "facebook_enabled": agent.facebook_enabled,
+        "instagram_enabled": agent.instagram_enabled,
+        "total_conversations": agent.total_conversations,
+        "total_messages": agent.total_messages,
+        "training_status": agent.training_status,
+        "is_active": agent.is_active,
+        "created_at": agent.created_at.isoformat()
+    } for agent in agents]

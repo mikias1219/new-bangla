@@ -43,8 +43,14 @@ class Organization(Base):
 
     # Settings
     timezone = Column(String, default="UTC")
-    language = Column(String, default="en")
+    language = Column(String, default="bn")  # Default to Bangla
     is_active = Column(Boolean, default=True)
+
+    # CRM/ERP Integration
+    crm_api_url = Column(String)
+    crm_api_key = Column(String)
+    crm_api_secret = Column(String)
+    crm_integration_enabled = Column(Boolean, default=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -113,6 +119,8 @@ class AIAgent(Base):
     whatsapp_number = Column(String)
     facebook_enabled = Column(Boolean, default=False)
     facebook_page_id = Column(String)
+    instagram_enabled = Column(Boolean, default=False)
+    instagram_account_id = Column(String)
 
     # Training
     trained_document_ids = Column(Text)  # JSON array of document IDs
@@ -144,17 +152,23 @@ class Conversation(Base):
     # External identifiers for integrations
     whatsapp_conversation_id = Column(String)
     facebook_conversation_id = Column(String)
+    instagram_conversation_id = Column(String)
     web_session_id = Column(String)
 
     # Metadata
-    platform = Column(String)  # whatsapp, facebook, web
+    platform = Column(String)  # whatsapp, facebook, instagram, web
     user_name = Column(String)
     user_phone = Column(String)
     user_email = Column(String)
 
     # Status
-    status = Column(String, default="active")  # active, closed, archived
+    status = Column(String, default="active")  # active, closed, archived, escalated
     last_message_at = Column(DateTime(timezone=True))
+
+    # Human handoff tracking
+    unsuccessful_responses = Column(Integer, default=0)  # Count of low-confidence responses
+    escalated_to_human = Column(Boolean, default=False)
+    human_agent_assigned = Column(String)  # Name/email of assigned human agent
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -189,6 +203,10 @@ class Message(Base):
 
     # Status
     status = Column(String, default="sent")  # sent, delivered, read, failed
+
+    # Customer satisfaction rating (1-5 scale, only for AI messages)
+    satisfaction_rating = Column(Integer)  # 1-5 rating from user
+    rating_feedback = Column(Text)  # Optional feedback text
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
