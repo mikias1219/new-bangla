@@ -226,8 +226,8 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify({
           name: newAgentData.name.trim(),
-          description: newAgentData.description.trim(),
-          system_prompt: newAgentData.systemPrompt.trim() || undefined
+          ...(newAgentData.description.trim() && { description: newAgentData.description.trim() }),
+          ...(newAgentData.systemPrompt.trim() && { system_prompt: newAgentData.systemPrompt.trim() })
         }),
       });
 

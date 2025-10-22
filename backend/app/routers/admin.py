@@ -64,6 +64,11 @@ class AdminStats(BaseModel):
     system: SystemStats
     ai_agents: AIAgentStats
 
+class CreateAIAgentRequest(BaseModel):
+    name: str
+    description: Optional[str] = None
+    system_prompt: Optional[str] = None
+
 class UserManagementResponse(BaseModel):
     id: int
     email: str
@@ -334,9 +339,7 @@ async def get_all_ai_agents(
 @router.post("/organizations/{org_id}/ai-agents")
 async def create_ai_agent_for_organization(
     org_id: int,
-    name: str,
-    description: Optional[str] = None,
-    system_prompt: Optional[str] = None,
+    agent_data: CreateAIAgentRequest,
     current_user: User = Depends(require_platform_admin),
     db: Session = Depends(get_db)
 ):
@@ -355,8 +358,9 @@ async def create_ai_agent_for_organization(
         )
 
     # Create system prompt tailored to the organization
+    system_prompt = agent_data.system_prompt
     if not system_prompt:
-        system_prompt = f"""You are {name}, an AI assistant for {organization.name}.
+        system_prompt = f"""You are {agent_data.name}, an AI assistant for {organization.name}.
         You help customers with their inquiries about {organization.name}'s products and services.
         Be helpful, professional, and knowledgeable about {organization.name}.
         Always respond in a friendly and customer-service oriented manner.
@@ -364,8 +368,8 @@ async def create_ai_agent_for_organization(
 
     agent = AIAgent(
         organization_id=org_id,
-        name=name,
-        description=description,
+        name=agent_data.name,
+        description=agent_data.description,
         system_prompt=system_prompt,
         training_status="created"
     )
