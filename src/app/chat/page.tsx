@@ -41,13 +41,7 @@ function ChatPageContent() {
     scrollToBottom();
   }, [messages]);
 
-  useEffect(() => {
-    if (agentId) {
-      loadAgent(parseInt(agentId));
-    }
-  }, [agentId]);
-
-  const loadAgent = async (id: number) => {
+  const loadAgent = useCallback(async (id: number) => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(`/api/organizations/ai-agents`, {
@@ -68,7 +62,13 @@ function ChatPageContent() {
       console.error("Failed to load agent:", error);
       router.push("/dashboard");
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    if (agentId) {
+      loadAgent(parseInt(agentId));
+    }
+  }, [agentId, loadAgent]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();

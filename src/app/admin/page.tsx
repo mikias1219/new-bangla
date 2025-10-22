@@ -70,8 +70,8 @@ interface User {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [organizations, setOrganizations] = useState<any[]>([]);
-  const [aiAgents, setAiAgents] = useState<any[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -580,7 +580,7 @@ function SubscriptionManagement() {
   );
 }
 
-function OrganizationManagement({ organizations }: { organizations: any[] }) {
+function OrganizationManagement({ organizations }: { organizations: Organization[] }) {
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-6 border-b border-gray-200">
@@ -650,7 +650,7 @@ function OrganizationManagement({ organizations }: { organizations: any[] }) {
   );
 }
 
-function AIAgentManagement({ aiAgents }: { aiAgents: any[] }) {
+function AIAgentManagement({ aiAgents }: { aiAgents: AIAgent[] }) {
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-6 border-b border-gray-200">
