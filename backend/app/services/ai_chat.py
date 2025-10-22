@@ -110,16 +110,36 @@ class AIChatService:
             db.rollback()
             return "I'm sorry, I encountered an error processing your message. Please try again."
 
+    def _detect_language(self, text: str) -> str:
+        """Detect if text is primarily in Bangla or English"""
+        # Count Bangla characters vs English characters
+        bangla_chars = 0
+        english_chars = 0
+
+        for char in text:
+            # Check for Bangla Unicode ranges
+            if '\u0980' <= char <= '\u09FF':
+                bangla_chars += 1
+            elif char.isascii() and char.isalpha():
+                english_chars += 1
+
+        # If more Bangla characters, return 'bangla', else 'english'
+        return 'bangla' if bangla_chars > english_chars else 'english'
+
     def _generate_response(self, user_message: str, context: str, agent: AIAgent) -> str:
         """Generate AI response using OpenAI with context"""
         try:
-            print(f"DEBUG: Agent: {agent.name}, system_prompt: {agent.system_prompt}")
-            print(f"DEBUG: Context: {context}")
-            # Build system prompt with Bangla language requirement
+            # Detect user's language
+            user_language = self._detect_language(user_message)
+            print(f"DEBUG: Detected language: {user_language}")
+
+            # Build system prompt based on detected language
             if context == "This is a general AI assistant. No specific training documents have been uploaded yet.":
                 # Generic AI assistant prompt when no training documents
                 agent_prompt = agent.system_prompt or "You are a helpful AI assistant."
-                system_prompt = f"""You are {agent.name}, a helpful AI assistant for {agent.organization.name}.
+
+                if user_language == 'bangla':
+                    system_prompt = f"""You are {agent.name}, a helpful AI assistant for {agent.organization.name}.
 
 {agent_prompt}
 
@@ -135,10 +155,27 @@ Guidelines:
 - Keep responses concise but informative
 - Ask clarifying questions when needed, in Bangla
 - Maintain a friendly and professional tone in Bangla"""
+                else:
+                    system_prompt = f"""You are {agent.name}, a helpful AI assistant for {agent.organization.name}.
+
+{agent_prompt}
+
+Since no specific training documents have been uploaded yet, you should provide general helpful assistance and guide users on how to get the most out of this AI assistant.
+
+Guidelines:
+- Be helpful, professional, and friendly
+- Respond in the same language as the user (English or other languages)
+- Provide general assistance and answer common questions
+- Mention that more specific help will be available once training documents are uploaded
+- Keep responses concise but informative
+- Ask clarifying questions when needed
+- Maintain a friendly and professional tone"""
             else:
                 # Standard prompt with training context
                 agent_prompt = agent.system_prompt or "You are a helpful AI assistant."
-                system_prompt = f"""You are {agent.name}, an AI assistant for {agent.organization.name}.
+
+                if user_language == 'bangla':
+                    system_prompt = f"""You are {agent.name}, an AI assistant for {agent.organization.name}.
 
 {agent_prompt}
 
@@ -155,6 +192,22 @@ Guidelines:
 - Keep responses concise but informative
 - Ask clarifying questions when needed, in Bangla
 - Maintain a friendly and professional tone in Bangla"""
+                else:
+                    system_prompt = f"""You are {agent.name}, an AI assistant for {agent.organization.name}.
+
+{agent_prompt}
+
+Use the following context from the organization's training documents to provide accurate, helpful responses:
+{context}
+
+Guidelines:
+- Be helpful, professional, and accurate
+- Respond in the same language as the user (English or other languages)
+- Use the provided context to answer questions
+- If you don't have relevant information in the context, say so politely
+- Keep responses concise but informative
+- Ask clarifying questions when needed
+- Maintain a friendly and professional tone"""
 
             # Call OpenAI API
             response = self.openai_client.chat.completions.create(

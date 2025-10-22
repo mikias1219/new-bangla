@@ -42,9 +42,24 @@ export default function VoiceChat({ onVoiceMessage, isLoading, onVoiceModeChange
     setIsListening(true);
     onVoiceModeChange?.(true);
     resetTranscript();
+
+    // Try to detect user's language preference from browser or use multi-language support
+    const userLang = navigator.language || 'en-US';
+    let speechLang = 'en-US'; // default to English
+
+    // Map common languages
+    if (userLang.startsWith('bn') || userLang.includes('Bengali')) {
+      speechLang = 'bn-BD'; // Bangla
+    } else if (userLang.startsWith('hi') || userLang.includes('Hindi')) {
+      speechLang = 'hi-IN'; // Hindi
+    } else if (userLang.startsWith('en')) {
+      speechLang = 'en-US'; // English
+    }
+    // Add more language mappings as needed
+
     SpeechRecognition.startListening({
       continuous: true,
-      language: 'bn-BD'  // Bangla (Bengali) language for Bangladesh
+      language: speechLang
     });
   };
 
@@ -69,17 +84,53 @@ export default function VoiceChat({ onVoiceMessage, isLoading, onVoiceModeChange
     utterance.pitch = 1;
     utterance.volume = 1;
 
-    // Try to use Bangla voice if available
+    // Detect language from text content and select appropriate voice
     const voices = speechSynthesis.getVoices();
-    const banglaVoice = voices.find(voice =>
-      voice.lang.startsWith('bn') ||
-      voice.name.toLowerCase().includes('bangla') ||
-      voice.name.toLowerCase().includes('bengali')
-    );
 
-    if (banglaVoice) {
-      utterance.voice = banglaVoice;
+    // Check for Bangla characters (Unicode range for Bengali)
+    const hasBanglaChars = /[\u0980-\u09FF]/.test(text);
+    const hasHindiChars = /[\u0900-\u097F]/.test(text);
+
+    let preferredVoice = null;
+
+    if (hasBanglaChars) {
+      // Try to find Bangla/Bengali voice
+      preferredVoice = voices.find(voice =>
+        voice.lang.startsWith('bn') ||
+        voice.name.toLowerCase().includes('bangla') ||
+        voice.name.toLowerCase().includes('bengali') ||
+        voice.lang.includes('Bengali')
+      );
       utterance.lang = 'bn-BD';
+    } else if (hasHindiChars) {
+      // Try to find Hindi voice
+      preferredVoice = voices.find(voice =>
+        voice.lang.startsWith('hi') ||
+        voice.name.toLowerCase().includes('hindi') ||
+        voice.lang.includes('Hindi')
+      );
+      utterance.lang = 'hi-IN';
+    }
+
+    // If no specific voice found for the detected language, try to find a voice that matches browser language
+    if (!preferredVoice) {
+      const userLang = navigator.language || 'en-US';
+      if (userLang.startsWith('bn')) {
+        preferredVoice = voices.find(voice => voice.lang.startsWith('bn'));
+        utterance.lang = 'bn-BD';
+      } else if (userLang.startsWith('hi')) {
+        preferredVoice = voices.find(voice => voice.lang.startsWith('hi'));
+        utterance.lang = 'hi-IN';
+      } else if (userLang.startsWith('en')) {
+        preferredVoice = voices.find(voice => voice.lang.startsWith('en'));
+        utterance.lang = 'en-US';
+      }
+    }
+
+    // Set voice if found, otherwise use default
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+      console.log(`Using voice: ${preferredVoice.name} (${preferredVoice.lang})`);
     }
 
     utterance.onstart = () => setIsSpeaking(true);

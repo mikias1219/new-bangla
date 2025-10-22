@@ -20,7 +20,11 @@ import {
   Mic,
   MicOff,
   Volume2,
-  Plus
+  Plus,
+  Trash2,
+  CheckCircle,
+  Languages,
+  Send
 } from "lucide-react";
 import VoiceChat, { speakAiResponse } from "@/components/voice/VoiceChat";
 
@@ -1165,270 +1169,168 @@ function TestAIAgents({
 
   return (
     <div className="bg-white rounded-lg shadow">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center gap-3 mb-4">
-          <Play className="w-6 h-6 text-blue-600" />
-          <h2 className="text-xl font-semibold text-gray-900">Test AI Agents</h2>
+      {/* Header with Actions */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* Agent Selection - Compact */}
+            <select
+              value={selectedAgentId || ""}
+              onChange={(e) => setSelectedAgentId(e.target.value ? parseInt(e.target.value) : null)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            >
+              <option value="">General AI Test</option>
+              {aiAgents.map((agent) => (
+                <option key={agent.id} value={agent.id}>
+                  {agent.name}
+                </option>
+              ))}
+            </select>
+            {/* Agent Status */}
+            {selectedAgent && (
+              <div className="flex items-center gap-2">
+                <Bot className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-gray-900">{selectedAgent.name}</span>
+                <span className={`px-2 py-0.5 text-xs rounded-full ${
+                  selectedAgent.training_status === "trained"
+                    ? "bg-green-100 text-green-800"
+                    : "bg-yellow-100 text-yellow-800"
+                }`}>
+                  {selectedAgent.training_status}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={clearTestChat}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+              title="Clear chat"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-        <p className="text-gray-600">
-          Test AI agents with both text and voice in Bangla language. Verify OpenAI integration and voice synthesis.
-        </p>
       </div>
 
-      <div className="p-6">
-        {/* Agent Selection */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select AI Agent to Test (Optional)
-          </label>
-          <select
-            value={selectedAgentId || ""}
-            onChange={(e) => setSelectedAgentId(e.target.value ? parseInt(e.target.value) : null)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">General OpenAI Testing (No specific agent)</option>
-            {aiAgents.map((agent) => (
-              <option key={agent.id} value={agent.id}>
-                {agent.name} - {agent.description} ({agent.organization_name})
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-gray-500 mt-1">
-            Choose "General OpenAI Testing" to test OpenAI functionality without a specific agent, or select a specific agent to test with their trained knowledge.
-          </p>
-        </div>
-
-        {selectedAgent && (
-          <>
-            {/* Agent Info */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-blue-900">{selectedAgent.name}</h3>
-                  <p className="text-blue-700 text-sm">{selectedAgent.description}</p>
+      <div className="flex">
+        {/* Chat Area */}
+        <div className="flex-1 p-4">
+          <div className="bg-gray-50 rounded-lg h-[500px] flex flex-col">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {testMessages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <Bot className="w-16 h-16 text-gray-300 mb-4" />
+                  <p className="text-gray-500 text-sm">Start a conversation</p>
+                  <p className="text-gray-400 text-xs mt-1">Type or use voice in any language</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  {selectedAgent.whatsapp_enabled && (
-                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">WhatsApp</span>
-                  )}
-                  {selectedAgent.facebook_enabled && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Facebook</span>
-                  )}
-                  <span className={`px-2 py-1 text-xs rounded ${
-                    selectedAgent.training_status === "trained"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-yellow-100 text-yellow-800"
-                  }`}>
-                    {selectedAgent.training_status}
-                  </span>
+              ) : (
+                testMessages.map((message, index) => (
+                  <div
+                    key={index}
+                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[320px] px-4 py-3 rounded-2xl shadow-sm ${
+                        message.type === 'user'
+                          ? 'bg-blue-600 text-white rounded-br-sm'
+                          : 'bg-white text-gray-900 rounded-bl-sm border border-gray-100'
+                      }`}
+                    >
+                      <p className="text-sm leading-relaxed">{message.content}</p>
+                      <p className={`text-xs mt-1 ${message.type === 'user' ? 'text-blue-100' : 'text-gray-400'}`}>
+                        {message.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+              {isTesting && (
+                <div className="flex justify-start">
+                  <div className="bg-white border border-gray-100 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                      <span className="text-sm text-gray-600">AI is thinking...</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Test Interface */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Chat Interface */}
-              <div className="lg:col-span-2">
-                <div className="bg-gray-50 rounded-lg p-4 h-96 flex flex-col">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900">Test Chat</h3>
-                    <button
-                      onClick={clearTestChat}
-                      className="text-sm text-gray-500 hover:text-gray-700"
-                    >
-                      Clear Chat
-                    </button>
-                  </div>
+            {/* Input Area */}
+            <div className="p-4 border-t border-gray-200 bg-white rounded-b-lg">
+              <div className="flex items-center gap-3">
+                {/* Voice Button */}
+                <VoiceChat
+                  onVoiceMessage={handleVoiceMessage}
+                  isLoading={isVoiceTesting}
+                />
 
-                  {/* Messages */}
-                  <div className="flex-1 overflow-y-auto mb-4 space-y-3">
-                    {testMessages.length === 0 ? (
-                      <div className="text-center text-gray-500 py-8">
-                        <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>Start testing by sending a message</p>
-                        <p className="text-sm">Try asking in Bangla: "আপনি কে?" (Who are you?)</p>
-                      </div>
-                    ) : (
-                      testMessages.map((message, index) => (
-                        <div
-                          key={index}
-                          className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`max-w-[280px] sm:max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                              message.type === 'user'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white border border-gray-200'
-                            }`}
-                          >
-                            <p className="text-sm">{message.content}</p>
-                            <p className="text-xs opacity-70 mt-1">
-                              {message.timestamp.toLocaleTimeString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                    {isTesting && (
-                      <div className="flex justify-start">
-                        <div className="bg-white border border-gray-200 rounded-lg px-4 py-2">
-                          <div className="flex items-center gap-2">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                            <span className="text-sm text-gray-600">AI is thinking...</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Input */}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={testInput}
-                      onChange={(e) => setTestInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && sendTestMessage(testInput)}
-                      placeholder="Type a message in Bangla or English..."
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      disabled={isTesting}
-                    />
-                    <button
-                      onClick={() => sendTestMessage(testInput)}
-                      disabled={!testInput.trim() || isTesting}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Voice Testing */}
-              <div className="space-y-6">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Mic className="w-5 h-5 text-green-600" />
-                    <h3 className="font-semibold text-green-900">Voice Test (Bangla)</h3>
-                  </div>
-                  <p className="text-green-700 text-sm mb-4">
-                    Test voice recognition and synthesis in Bangla language.
-                  </p>
-
-                  <VoiceChat
-                    onVoiceMessage={handleVoiceMessage}
-                    isLoading={isVoiceTesting}
+                {/* Text Input */}
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={testInput}
+                    onChange={(e) => setTestInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendTestMessage(testInput)}
+                    placeholder="Type your message... (supports English, Bangla, etc.)"
+                    className="w-full px-4 py-3 pr-12 bg-white border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 shadow-sm"
+                    disabled={isTesting}
                   />
-
-                  <div className="mt-4 p-3 bg-white rounded border">
-                    <p className="text-xs text-gray-600">
-                      <strong>Instructions:</strong> Click the microphone and speak in Bangla.
-                      The AI will respond both in text and voice.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Volume2 className="w-5 h-5 text-blue-600" />
-                    <h3 className="font-semibold text-blue-900">Test Status</h3>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-blue-700">OpenAI Integration</span>
-                      <span className="text-green-600 font-medium">✓ Working</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-blue-700">Voice Recognition</span>
-                      <span className="text-green-600 font-medium">✓ Bangla</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-blue-700">Voice Synthesis</span>
-                      <span className="text-green-600 font-medium">✓ Active</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-blue-700">Vector Search</span>
-                      <span className="text-green-600 font-medium">✓ Working</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-yellow-900 mb-2">Sample Test Messages</h3>
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => sendTestMessage("আপনি কে?")}
-                      className="w-full text-left px-3 py-2 text-sm bg-white rounded hover:bg-yellow-100 border"
-                    >
-                      "আপনি কে?" (Who are you?)
-                    </button>
-                    <button
-                      onClick={() => sendTestMessage("আমার অর্ডার কোথায়?")}
-                      className="w-full text-left px-3 py-2 text-sm bg-white rounded hover:bg-yellow-100 border"
-                    >
-                      "আমার অর্ডার কোথায়?" (Where is my order?)
-                    </button>
-                    <button
-                      onClick={() => sendTestMessage("কাস্টমার সার্ভিস এর সময় কত?")}
-                      className="w-full text-left px-3 py-2 text-sm bg-white rounded hover:bg-yellow-100 border"
-                    >
-                      "কাস্টমার সার্ভিস এর সময় কত?" (What are customer service hours?)
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => sendTestMessage(testInput)}
+                    disabled={!testInput.trim() || isTesting}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>
-          </>
-        )}
-
-        {!selectedAgent && aiAgents.length > 0 && (
-          <div className="text-center py-12">
-            <Bot className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Select an AI Agent</h3>
-            <p className="text-gray-600">Choose an AI agent from the dropdown above to start testing.</p>
           </div>
-        )}
-
-        {aiAgents.length === 0 && (
-          <div className="text-center py-12">
-            <Bot className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No AI Agents Available</h3>
-            <p className="text-gray-600">Create AI agents first to test their functionality.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function SystemManagement() {
-  return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">System Settings</h2>
-      <p className="text-gray-600">Configure system-wide settings and integrations</p>
-      <div className="mt-6 space-y-4">
-        <div className="border border-gray-200 rounded-lg p-4">
-          <h3 className="font-medium text-gray-900 mb-2">OpenAI Integration</h3>
-          <p className="text-sm text-gray-600 mb-3">Configure your OpenAI API key for AI responses</p>
-          <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-            Configure API Key
-          </button>
         </div>
 
-        <div className="border border-gray-200 rounded-lg p-4">
-          <h3 className="font-medium text-gray-900 mb-2">Webhook Endpoints</h3>
-          <p className="text-sm text-gray-600 mb-3">Social media webhook URLs for integrations</p>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>WhatsApp:</span>
-              <code className="bg-gray-100 px-2 py-1 rounded">/api/chat/webhooks/whatsapp</code>
+        {/* Status Panel */}
+        <div className="w-64 border-l border-gray-200 p-4 bg-gray-50">
+          <div className="space-y-4">
+            {/* Status Indicators */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-gray-700">OpenAI</span>
+                </div>
+                <CheckCircle className="w-4 h-4 text-green-600" />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm text-gray-700">Voice</span>
+                </div>
+                <Mic className="w-4 h-4 text-blue-600" />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  <span className="text-sm text-gray-700">Languages</span>
+                </div>
+                <Languages className="w-4 h-4 text-purple-600" />
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span>Facebook:</span>
-              <code className="bg-gray-100 px-2 py-1 rounded">/api/chat/webhooks/facebook</code>
-            </div>
-            <div className="flex justify-between">
-              <span>Instagram:</span>
-              <code className="bg-gray-100 px-2 py-1 rounded">/api/chat/webhooks/instagram</code>
+
+            {/* Language Info */}
+            <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Multi-Language Support</h4>
+              <div className="space-y-1 text-xs text-gray-600">
+                <div>• English ↔ English</div>
+                <div>• বাংলা ↔ বাংলা</div>
+                <div>• Voice in all languages</div>
+              </div>
             </div>
           </div>
         </div>
