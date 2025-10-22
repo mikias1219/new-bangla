@@ -1167,6 +1167,32 @@ function TestAIAgents({
 }) {
   const selectedAgent = aiAgents.find(agent => agent.id === selectedAgentId);
 
+  // Voice recording state
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordedVoiceText, setRecordedVoiceText] = useState("");
+
+  const handleVoiceMessageForTest = (voiceMessage: string) => {
+    if (isRecordingVoice) {
+      // Voice recording mode - set as recorded text, don't send automatically
+      setRecordedVoiceText(voiceMessage);
+      setIsRecordingVoice(false);
+    } else {
+      // Voice input mode - send immediately
+      sendTestMessage(voiceMessage);
+    }
+  };
+
+  const startVoiceRecording = () => {
+    setIsRecordingVoice(true);
+  };
+
+  const sendRecordedVoice = () => {
+    if (recordedVoiceText.trim()) {
+      sendTestMessage(recordedVoiceText);
+      setRecordedVoiceText("");
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow">
       {/* Header with Actions */}
@@ -1262,10 +1288,50 @@ function TestAIAgents({
 
             {/* Input Area */}
             <div className="p-4 border-t border-gray-200 bg-white rounded-b-lg">
+              {/* Voice Recording Controls */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-4">
+                  {/* Voice Recording */}
+                  <button
+                    onClick={startVoiceRecording}
+                    disabled={isTesting || isVoiceTesting}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isRecordingVoice
+                        ? 'bg-red-100 text-red-800 border border-red-300 animate-pulse'
+                        : 'bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    title="Record voice message"
+                  >
+                    <Mic className="w-4 h-4" />
+                    Record
+                  </button>
+                </div>
+
+                <div className="text-xs text-gray-500">
+                  Recording: {recordedVoiceText ? 'Ready' : 'None'}
+                </div>
+              </div>
+
+              {/* Recorded Voice Preview */}
+              {recordedVoiceText && (
+                <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-blue-900">Recorded Voice:</span>
+                    <button
+                      onClick={sendRecordedVoice}
+                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                    >
+                      Send Recording
+                    </button>
+                  </div>
+                  <p className="text-sm text-blue-800">{recordedVoiceText}</p>
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
-                {/* Voice Button */}
+                {/* Voice Input Button */}
                 <VoiceChat
-                  onVoiceMessage={handleVoiceMessage}
+                  onVoiceMessage={handleVoiceMessageForTest}
                   isLoading={isVoiceTesting}
                 />
 
@@ -1277,9 +1343,22 @@ function TestAIAgents({
                     onChange={(e) => setTestInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendTestMessage(testInput)}
                     placeholder="Type your message... (supports English, Bangla, etc.)"
-                    className="w-full px-4 py-3 pr-12 bg-white border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 shadow-sm"
+                    className="w-full px-4 py-3 pr-20 bg-white border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 shadow-sm"
                     disabled={isTesting}
                   />
+                  {/* Voice Recording Icon in Input */}
+                  <button
+                    onClick={startVoiceRecording}
+                    disabled={isTesting || isVoiceTesting}
+                    className={`absolute right-12 top-1/2 transform -translate-y-1/2 p-1.5 rounded-full transition-colors ${
+                      isRecordingVoice
+                        ? 'bg-red-100 text-red-600 animate-pulse'
+                        : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    title="Record voice message"
+                  >
+                    <Mic className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => sendTestMessage(testInput)}
                     disabled={!testInput.trim() || isTesting}

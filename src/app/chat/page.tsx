@@ -78,6 +78,8 @@ function ChatPageContent() {
     e.preventDefault();
     if (!newMessage.trim() || loading) return;
 
+    const messageToSend = newMessage.trim();
+    setNewMessage(""); // Clear immediately for better UX
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -88,7 +90,7 @@ function ChatPageContent() {
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-          message: newMessage,
+          message: messageToSend,
           conversation_id: conversationId
         })
       });
@@ -99,7 +101,7 @@ function ChatPageContent() {
         // Add user message
         const userMessage: Message = {
           id: Date.now(),
-          content: newMessage,
+          content: messageToSend,
           sender_type: "user",
           sender_name: "You",
           created_at: new Date().toISOString(),
@@ -128,10 +130,14 @@ function ChatPageContent() {
       } else {
         const error = await response.json();
         alert(`Failed to send message: ${error.detail}`);
+        // Restore the message if sending failed
+        setNewMessage(messageToSend);
       }
     } catch (error) {
       console.error("Error sending message:", error);
       alert("Failed to send message. Please try again.");
+      // Restore the message if sending failed
+      setNewMessage(messageToSend);
     } finally {
       setLoading(false);
     }
@@ -331,18 +337,33 @@ function ChatPageContent() {
             )}
 
             <form onSubmit={sendMessage} className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder={
-                  isVoiceMode
-                    ? (isRecordingVoice ? "Recording voice..." : "Voice input active...")
-                    : `Ask ${agent.name} a question...`
-                }
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base disabled:bg-gray-100 disabled:cursor-not-allowed"
-                disabled={loading || isVoiceMode}
-              />
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder={
+                    isVoiceMode
+                      ? (isRecordingVoice ? "Recording voice..." : "Voice input active...")
+                      : `Ask ${agent.name} a question...`
+                  }
+                  className="w-full pr-12 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  disabled={loading || isVoiceMode}
+                />
+                {/* Voice Recording Icon in Input */}
+                <button
+                  onClick={startVoiceRecording}
+                  disabled={loading || isVoiceMode}
+                  className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1.5 rounded-full transition-colors ${
+                    isRecordingVoice
+                      ? 'bg-red-100 text-red-600 animate-pulse'
+                      : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title="Record voice message"
+                >
+                  <Mic className="w-4 h-4" />
+                </button>
+              </div>
               <button
                 type="submit"
                 disabled={!newMessage.trim() || loading || isVoiceMode}
