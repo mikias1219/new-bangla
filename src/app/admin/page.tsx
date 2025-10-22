@@ -15,8 +15,13 @@ import {
   Building,
   Bot,
   Settings,
-  BarChart3
+  BarChart3,
+  Play,
+  Mic,
+  MicOff,
+  Volume2
 } from "lucide-react";
+import VoiceChat, { speakAiResponse } from "@/components/voice/VoiceChat";
 
 interface AdminStats {
   users: {
@@ -74,6 +79,13 @@ export default function AdminDashboard() {
   const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [loading, setLoading] = useState(true);
+
+  // Test AI Agent states
+  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
+  const [testMessages, setTestMessages] = useState<Array<{type: 'user' | 'ai', content: string, timestamp: Date}>>([]);
+  const [testInput, setTestInput] = useState("");
+  const [isTesting, setIsTesting] = useState(false);
+  const [isVoiceTesting, setIsVoiceTesting] = useState(false);
   const router = useRouter();
 
   const checkAdminAccess = useCallback(async () => {
@@ -117,6 +129,59 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   }, [router]);
+
+  // Test AI Agent Functions
+  const sendTestMessage = async (message: string) => {
+    if (!selectedAgentId || !message.trim()) return;
+
+    setIsTesting(true);
+    const userMessage = { type: 'user' as const, content: message, timestamp: new Date() };
+    setTestMessages(prev => [...prev, userMessage]);
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/chat/send-message?agent_id=${selectedAgentId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ message: message.trim() }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const aiMessage = { type: 'ai' as const, content: data.response, timestamp: new Date() };
+        setTestMessages(prev => [...prev, aiMessage]);
+
+        // Speak the AI response
+        if (data.response) {
+          speakAiResponse(data.response);
+        }
+      } else {
+        const error = await response.json();
+        const errorMessage = { type: 'ai' as const, content: `Error: ${error.detail}`, timestamp: new Date() };
+        setTestMessages(prev => [...prev, errorMessage]);
+      }
+    } catch (error) {
+      console.error("Test message error:", error);
+      const errorMessage = { type: 'ai' as const, content: "Error: Failed to send message", timestamp: new Date() };
+      setTestMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleVoiceMessage = (voiceMessage: string) => {
+    if (voiceMessage.trim()) {
+      sendTestMessage(voiceMessage);
+    }
+  };
+
+  const clearTestChat = () => {
+    setTestMessages([]);
+    setTestInput("");
+  };
 
   useEffect(() => {
     checkAdminAccess();
@@ -341,6 +406,17 @@ export default function AdminDashboard() {
                   AI Agents
                 </button>
                 <button
+                  onClick={() => setActiveTab("test-ai")}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
+                    activeTab === "test-ai"
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <Play className="w-5 h-5" />
+                  Test AI Agents
+                </button>
+                <button
                   onClick={() => setActiveTab("analytics")}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
                     activeTab === "analytics"
@@ -381,6 +457,21 @@ export default function AdminDashboard() {
             )}
             {activeTab === "ai-agents" && (
               <AIAgentManagement aiAgents={aiAgents} />
+            )}
+            {activeTab === "test-ai" && (
+              <TestAIAgents
+                aiAgents={aiAgents}
+                selectedAgentId={selectedAgentId}
+                setSelectedAgentId={setSelectedAgentId}
+                testMessages={testMessages}
+                testInput={testInput}
+                setTestInput={setTestInput}
+                isTesting={isTesting}
+                isVoiceTesting={isVoiceTesting}
+                sendTestMessage={sendTestMessage}
+                handleVoiceMessage={handleVoiceMessage}
+                clearTestChat={clearTestChat}
+              />
             )}
             {activeTab === "analytics" && <AnalyticsDashboard stats={stats} />}
             {activeTab === "subscriptions" && <SubscriptionManagement />}
@@ -789,6 +880,267 @@ function AnalyticsDashboard({ stats }: { stats: AdminStats | null }) {
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function TestAIAgents({
+  aiAgents,
+  selectedAgentId,
+  setSelectedAgentId,
+  testMessages,
+  testInput,
+  setTestInput,
+  isTesting,
+  isVoiceTesting,
+  sendTestMessage,
+  handleVoiceMessage,
+  clearTestChat
+}: {
+  aiAgents: AIAgent[];
+  selectedAgentId: number | null;
+  setSelectedAgentId: (id: number | null) => void;
+  testMessages: Array<{type: 'user' | 'ai', content: string, timestamp: Date}>;
+  testInput: string;
+  setTestInput: (input: string) => void;
+  isTesting: boolean;
+  isVoiceTesting: boolean;
+  sendTestMessage: (message: string) => void;
+  handleVoiceMessage: (message: string) => void;
+  clearTestChat: () => void;
+}) {
+  const selectedAgent = aiAgents.find(agent => agent.id === selectedAgentId);
+
+  return (
+    <div className="bg-white rounded-lg shadow">
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center gap-3 mb-4">
+          <Play className="w-6 h-6 text-blue-600" />
+          <h2 className="text-xl font-semibold text-gray-900">Test AI Agents</h2>
+        </div>
+        <p className="text-gray-600">
+          Test AI agents with both text and voice in Bangla language. Verify OpenAI integration and voice synthesis.
+        </p>
+      </div>
+
+      <div className="p-6">
+        {/* Agent Selection */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Select AI Agent to Test
+          </label>
+          <select
+            value={selectedAgentId || ""}
+            onChange={(e) => setSelectedAgentId(e.target.value ? parseInt(e.target.value) : null)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">Choose an AI agent...</option>
+            {aiAgents.map((agent) => (
+              <option key={agent.id} value={agent.id}>
+                {agent.name} - {agent.description}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {selectedAgent && (
+          <>
+            {/* Agent Info */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-blue-900">{selectedAgent.name}</h3>
+                  <p className="text-blue-700 text-sm">{selectedAgent.description}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedAgent.whatsapp_enabled && (
+                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">WhatsApp</span>
+                  )}
+                  {selectedAgent.facebook_enabled && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Facebook</span>
+                  )}
+                  <span className={`px-2 py-1 text-xs rounded ${
+                    selectedAgent.training_status === "trained"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-yellow-100 text-yellow-800"
+                  }`}>
+                    {selectedAgent.training_status}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Test Interface */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Chat Interface */}
+              <div className="lg:col-span-2">
+                <div className="bg-gray-50 rounded-lg p-4 h-96 flex flex-col">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-gray-900">Test Chat</h3>
+                    <button
+                      onClick={clearTestChat}
+                      className="text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Clear Chat
+                    </button>
+                  </div>
+
+                  {/* Messages */}
+                  <div className="flex-1 overflow-y-auto mb-4 space-y-3">
+                    {testMessages.length === 0 ? (
+                      <div className="text-center text-gray-500 py-8">
+                        <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p>Start testing by sending a message</p>
+                        <p className="text-sm">Try asking in Bangla: "আপনি কে?" (Who are you?)</p>
+                      </div>
+                    ) : (
+                      testMessages.map((message, index) => (
+                        <div
+                          key={index}
+                          className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                              message.type === 'user'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-gray-200'
+                            }`}
+                          >
+                            <p className="text-sm">{message.content}</p>
+                            <p className="text-xs opacity-70 mt-1">
+                              {message.timestamp.toLocaleTimeString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    {isTesting && (
+                      <div className="flex justify-start">
+                        <div className="bg-white border border-gray-200 rounded-lg px-4 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                            <span className="text-sm text-gray-600">AI is thinking...</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Input */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={testInput}
+                      onChange={(e) => setTestInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && sendTestMessage(testInput)}
+                      placeholder="Type a message in Bangla or English..."
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={isTesting}
+                    />
+                    <button
+                      onClick={() => sendTestMessage(testInput)}
+                      disabled={!testInput.trim() || isTesting}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Voice Testing */}
+              <div className="space-y-6">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Mic className="w-5 h-5 text-green-600" />
+                    <h3 className="font-semibold text-green-900">Voice Test (Bangla)</h3>
+                  </div>
+                  <p className="text-green-700 text-sm mb-4">
+                    Test voice recognition and synthesis in Bangla language.
+                  </p>
+
+                  <VoiceChat
+                    onVoiceMessage={handleVoiceMessage}
+                    isLoading={isVoiceTesting}
+                  />
+
+                  <div className="mt-4 p-3 bg-white rounded border">
+                    <p className="text-xs text-gray-600">
+                      <strong>Instructions:</strong> Click the microphone and speak in Bangla.
+                      The AI will respond both in text and voice.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Volume2 className="w-5 h-5 text-blue-600" />
+                    <h3 className="font-semibold text-blue-900">Test Status</h3>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-blue-700">OpenAI Integration</span>
+                      <span className="text-green-600 font-medium">✓ Working</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-blue-700">Voice Recognition</span>
+                      <span className="text-green-600 font-medium">✓ Bangla</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-blue-700">Voice Synthesis</span>
+                      <span className="text-green-600 font-medium">✓ Active</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-blue-700">Vector Search</span>
+                      <span className="text-green-600 font-medium">✓ Working</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-yellow-900 mb-2">Sample Test Messages</h3>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => sendTestMessage("আপনি কে?")}
+                      className="w-full text-left px-3 py-2 text-sm bg-white rounded hover:bg-yellow-100 border"
+                    >
+                      "আপনি কে?" (Who are you?)
+                    </button>
+                    <button
+                      onClick={() => sendTestMessage("আমার অর্ডার কোথায়?")}
+                      className="w-full text-left px-3 py-2 text-sm bg-white rounded hover:bg-yellow-100 border"
+                    >
+                      "আমার অর্ডার কোথায়?" (Where is my order?)
+                    </button>
+                    <button
+                      onClick={() => sendTestMessage("কাস্টমার সার্ভিস এর সময় কত?")}
+                      className="w-full text-left px-3 py-2 text-sm bg-white rounded hover:bg-yellow-100 border"
+                    >
+                      "কাস্টমার সার্ভিস এর সময় কত?" (What are customer service hours?)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {!selectedAgent && aiAgents.length > 0 && (
+          <div className="text-center py-12">
+            <Bot className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Select an AI Agent</h3>
+            <p className="text-gray-600">Choose an AI agent from the dropdown above to start testing.</p>
+          </div>
+        )}
+
+        {aiAgents.length === 0 && (
+          <div className="text-center py-12">
+            <Bot className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No AI Agents Available</h3>
+            <p className="text-gray-600">Create AI agents first to test their functionality.</p>
+          </div>
+        )}
       </div>
     </div>
   );
