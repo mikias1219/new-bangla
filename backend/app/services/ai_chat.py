@@ -113,6 +113,8 @@ class AIChatService:
     def _generate_response(self, user_message: str, context: str, agent: AIAgent) -> str:
         """Generate AI response using OpenAI with context"""
         try:
+            print(f"DEBUG: Agent: {agent.name}, system_prompt: {agent.system_prompt}")
+            print(f"DEBUG: Context: {context}")
             # Build system prompt with Bangla language requirement
             if context == "This is a general AI assistant. No specific training documents have been uploaded yet.":
                 # Generic AI assistant prompt when no training documents
@@ -169,6 +171,9 @@ Guidelines:
 
         except Exception as e:
             logger.error(f"Error generating AI response: {str(e)}")
+            print(f"DEBUG: Exception in _generate_response: {str(e)}")
+            import traceback
+            print(f"DEBUG: Traceback: {traceback.format_exc()}")
             return "I'm sorry, I'm having trouble generating a response right now. Please try again later."
 
     def _calculate_confidence(self, context: str, relevant_chunks: List[Dict]) -> float:
