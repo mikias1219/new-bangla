@@ -40,7 +40,31 @@ export default function LoginPage() {
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem("token", data.access_token);
-        router.push("/dashboard");
+
+        // Get user info to determine role
+        try {
+          const userResponse = await fetch("/api/users/me", {
+            headers: {
+              "Authorization": `Bearer ${data.access_token}`,
+            },
+          });
+
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            // Check if user is admin (either is_superuser or is_platform_admin)
+            if (userData.is_superuser || userData.is_platform_admin) {
+              router.push("/admin");
+            } else {
+              router.push("/dashboard");
+            }
+          } else {
+            // If we can't get user info, default to dashboard
+            router.push("/dashboard");
+          }
+        } catch {
+          // If there's an error getting user info, default to dashboard
+          router.push("/dashboard");
+        }
       } else {
         setError("Invalid username or password");
       }
