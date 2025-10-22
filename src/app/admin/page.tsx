@@ -157,15 +157,11 @@ export default function AdminDashboard() {
 
       if (selectedAgentId) {
         // Test with specific agent
-        endpoint = `/api/chat/send-message?agent_id=${selectedAgentId}`;
+        endpoint = `/api/chat/agents/${selectedAgentId}/chat`;
       } else {
         // General OpenAI testing without specific agent
-        endpoint = `/api/admin/test-openai`;
-        requestBody = {
-          message: message.trim(),
-          model: "gpt-4",
-          system_prompt: "You are a helpful AI assistant. Respond in a friendly and professional manner."
-        };
+        endpoint = `/api/admin/test-openai?message=${encodeURIComponent(message.trim())}`;
+        requestBody = {};
       }
 
       const response = await fetch(endpoint, {
@@ -174,12 +170,12 @@ export default function AdminDashboard() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify(requestBody),
+        ...(Object.keys(requestBody).length > 0 && { body: JSON.stringify(requestBody) }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        const aiResponse = selectedAgentId ? data.response : data.choices[0].message.content;
+        const aiResponse = selectedAgentId ? data.response : data.response;
         const aiMessage = { type: 'ai' as const, content: aiResponse, timestamp: new Date() };
         setTestMessages(prev => [...prev, aiMessage]);
 
