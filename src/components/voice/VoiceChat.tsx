@@ -42,7 +42,7 @@ export default function VoiceChat({ onVoiceMessage, isLoading }: VoiceChatProps)
     resetTranscript();
     SpeechRecognition.startListening({
       continuous: true,
-      language: 'en-US'
+      language: 'bn-BD'  // Bangla (Bengali) language for Bangladesh
     });
   };
 
@@ -65,6 +65,19 @@ export default function VoiceChat({ onVoiceMessage, isLoading }: VoiceChatProps)
     utterance.rate = 1;
     utterance.pitch = 1;
     utterance.volume = 1;
+
+    // Try to use Bangla voice if available
+    const voices = speechSynthesis.getVoices();
+    const banglaVoice = voices.find(voice =>
+      voice.lang.startsWith('bn') ||
+      voice.name.toLowerCase().includes('bangla') ||
+      voice.name.toLowerCase().includes('bengali')
+    );
+
+    if (banglaVoice) {
+      utterance.voice = banglaVoice;
+      utterance.lang = 'bn-BD';
+    }
 
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);

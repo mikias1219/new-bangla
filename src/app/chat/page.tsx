@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Bot, User, ArrowLeft, MessageSquare } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import VoiceChat, { speakAiResponse } from "@/components/voice/VoiceChat";
 
 interface Message {
   id: number;
@@ -114,6 +115,11 @@ function ChatPageContent() {
         setMessages(prev => [...prev, userMessage, aiMessage]);
         setConversationId(data.conversation_id);
         setNewMessage("");
+
+        // Speak the AI response
+        if (data.response) {
+          speakAiResponse(data.response);
+        }
       } else {
         const error = await response.json();
         alert(`Failed to send message: ${error.detail}`);
@@ -124,6 +130,14 @@ function ChatPageContent() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleVoiceMessage = (voiceMessage: string) => {
+    // Set the voice message as the new message and send it
+    setNewMessage(voiceMessage);
+    // Send the message immediately
+    const event = { preventDefault: () => {} } as React.FormEvent;
+    sendMessage(event);
   };
 
   if (!agent) {
@@ -258,6 +272,9 @@ function ChatPageContent() {
           </div>
         </div>
 
+        {/* Voice Chat Component */}
+        <VoiceChat onVoiceMessage={handleVoiceMessage} isLoading={loading} />
+
         {/* Info */}
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
@@ -268,6 +285,10 @@ function ChatPageContent() {
                 This AI agent responds based on your uploaded training documents. The confidence score
                 indicates how well the response matches your training data. For best results, upload
                 comprehensive documentation about your products, services, and FAQs.
+              </p>
+              <p className="text-blue-700 text-sm mt-2">
+                <strong>Voice Features:</strong> Use the microphone button to speak your questions in Bangla,
+                and enable voice output to hear responses. Make sure your browser supports speech recognition.
               </p>
             </div>
           </div>

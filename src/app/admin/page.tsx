@@ -11,7 +11,11 @@ import {
   UserCheck,
   UserX,
   Crown,
-  LogOut
+  LogOut,
+  Building,
+  Bot,
+  Settings,
+  BarChart3
 } from "lucide-react";
 
 interface AdminStats {
@@ -35,6 +39,20 @@ interface AdminStats {
     average_session_duration: number;
     user_satisfaction_rate: number;
   };
+  ai_agents: {
+    total_agents: number;
+    active_agents: number;
+    total_conversations: number;
+    average_confidence: number;
+    escalated_conversations: number;
+    platform_breakdown: { [key: string]: number };
+  };
+  organizations: {
+    total_organizations: number;
+    active_organizations: number;
+    total_chat_limit: number;
+    used_chats: number;
+  };
 }
 
 interface User {
@@ -52,6 +70,8 @@ interface User {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [aiAgents, setAiAgents] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -87,6 +107,8 @@ export default function AdminDashboard() {
       // Load admin data
       await loadAdminStats();
       await loadUsers();
+      await loadOrganizations();
+      await loadAiAgents();
 
     } catch (error) {
       console.error("Admin access check failed:", error);
@@ -133,6 +155,42 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error("Failed to load users:", error);
+    }
+  };
+
+  const loadOrganizations = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/admin/organizations", {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setOrganizations(data);
+      }
+    } catch (error) {
+      console.error("Failed to load organizations:", error);
+    }
+  };
+
+  const loadAiAgents = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/admin/ai-agents", {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAiAgents(data);
+      }
+    } catch (error) {
+      console.error("Failed to load AI agents:", error);
     }
   };
 
@@ -261,6 +319,39 @@ export default function AdminDashboard() {
                   Subscriptions
                 </button>
                 <button
+                  onClick={() => setActiveTab("organizations")}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
+                    activeTab === "organizations"
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <Building className="w-5 h-5" />
+                  Organizations
+                </button>
+                <button
+                  onClick={() => setActiveTab("ai-agents")}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
+                    activeTab === "ai-agents"
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <Bot className="w-5 h-5" />
+                  AI Agents
+                </button>
+                <button
+                  onClick={() => setActiveTab("analytics")}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
+                    activeTab === "analytics"
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <BarChart3 className="w-5 h-5" />
+                  Analytics
+                </button>
+                <button
                   onClick={() => setActiveTab("system")}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
                     activeTab === "system"
@@ -268,8 +359,8 @@ export default function AdminDashboard() {
                       : "text-gray-700 hover:bg-gray-50"
                   }`}
                 >
-                  <MessageSquare className="w-5 h-5" />
-                  System
+                  <Settings className="w-5 h-5" />
+                  System Settings
                 </button>
               </nav>
             </div>
@@ -285,6 +376,13 @@ export default function AdminDashboard() {
                 onToggleAdmin={toggleAdminStatus}
               />
             )}
+            {activeTab === "organizations" && (
+              <OrganizationManagement organizations={organizations} />
+            )}
+            {activeTab === "ai-agents" && (
+              <AIAgentManagement aiAgents={aiAgents} />
+            )}
+            {activeTab === "analytics" && <AnalyticsDashboard stats={stats} />}
             {activeTab === "subscriptions" && <SubscriptionManagement />}
             {activeTab === "system" && <SystemManagement />}
           </div>
@@ -482,13 +580,252 @@ function SubscriptionManagement() {
   );
 }
 
+function OrganizationManagement({ organizations }: { organizations: any[] }) {
+  return (
+    <div className="bg-white rounded-lg shadow">
+      <div className="p-6 border-b border-gray-200">
+        <h2 className="text-xl font-semibold text-gray-900">Organization Management</h2>
+        <p className="text-gray-600">Manage client organizations and their AI agents</p>
+      </div>
+      <div className="p-6">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Organization
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Plan
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  AI Agents
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Usage
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {organizations.map((org) => (
+                <tr key={org.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {org.name}
+                      </div>
+                      <div className="text-sm text-gray-500">{org.domain}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                      {org.plan}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {org.max_ai_agents}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {org.current_monthly_chats}/{org.max_monthly_chats}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      org.status === 'active'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {org.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AIAgentManagement({ aiAgents }: { aiAgents: any[] }) {
+  return (
+    <div className="bg-white rounded-lg shadow">
+      <div className="p-6 border-b border-gray-200">
+        <h2 className="text-xl font-semibold text-gray-900">AI Agent Management</h2>
+        <p className="text-gray-600">Monitor and manage all AI agents across organizations</p>
+      </div>
+      <div className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {aiAgents.map((agent) => (
+            <div key={agent.id} className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-medium text-gray-900">{agent.name}</h3>
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                  agent.is_active
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {agent.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+
+              <p className="text-sm text-gray-600 mb-3">{agent.description}</p>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Conversations:</span>
+                  <span className="font-medium">{agent.total_conversations}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Messages:</span>
+                  <span className="font-medium">{agent.total_messages}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Training Status:</span>
+                  <span className="font-medium">{agent.training_status}</span>
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-1">
+                {agent.whatsapp_enabled && (
+                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">
+                    WhatsApp
+                  </span>
+                )}
+                {agent.facebook_enabled && (
+                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded bg-blue-100 text-blue-800">
+                    Facebook
+                  </span>
+                )}
+                {agent.instagram_enabled && (
+                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded bg-pink-100 text-pink-800">
+                    Instagram
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsDashboard({ stats }: { stats: AdminStats | null }) {
+  if (!stats) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <p className="text-gray-600">Loading analytics data...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* AI Agent Analytics */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">AI Agent Performance</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <div className="flex items-center">
+              <Bot className="w-8 h-8 text-purple-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-purple-600">Total Agents</p>
+                <p className="text-2xl font-bold text-purple-900">{stats.ai_agents.total_agents}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-green-50 p-4 rounded-lg">
+            <div className="flex items-center">
+              <MessageSquare className="w-8 h-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-green-600">Conversations</p>
+                <p className="text-2xl font-bold text-green-900">{stats.ai_agents.total_conversations}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="flex items-center">
+              <TrendingUp className="w-8 h-8 text-blue-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-blue-600">Avg Confidence</p>
+                <p className="text-2xl font-bold text-blue-900">{stats.ai_agents.average_confidence}%</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-red-50 p-4 rounded-lg">
+            <div className="flex items-center">
+              <Shield className="w-8 h-8 text-red-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-red-600">Escalated</p>
+                <p className="text-2xl font-bold text-red-900">{stats.ai_agents.escalated_conversations}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Platform Usage Breakdown */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Platform Usage</h2>
+        <div className="space-y-3">
+          {Object.entries(stats.ai_agents.platform_breakdown).map(([platform, count]) => (
+            <div key={platform} className="flex items-center justify-between">
+              <span className="text-gray-700 capitalize">{platform}</span>
+              <div className="flex items-center gap-2">
+                <div className="w-32 bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full"
+                    style={{
+                      width: `${(count / Object.values(stats.ai_agents.platform_breakdown).reduce((a, b) => a + b, 0)) * 100}%`
+                    }}
+                  ></div>
+                </div>
+                <span className="text-sm font-medium text-gray-900 w-12 text-right">{count}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SystemManagement() {
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">System Management</h2>
-      <p className="text-gray-600">Monitor system performance and logs</p>
-      <div className="mt-6">
-        <p className="text-gray-500">System management features will be available soon.</p>
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">System Settings</h2>
+      <p className="text-gray-600">Configure system-wide settings and integrations</p>
+      <div className="mt-6 space-y-4">
+        <div className="border border-gray-200 rounded-lg p-4">
+          <h3 className="font-medium text-gray-900 mb-2">OpenAI Integration</h3>
+          <p className="text-sm text-gray-600 mb-3">Configure your OpenAI API key for AI responses</p>
+          <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+            Configure API Key
+          </button>
+        </div>
+
+        <div className="border border-gray-200 rounded-lg p-4">
+          <h3 className="font-medium text-gray-900 mb-2">Webhook Endpoints</h3>
+          <p className="text-sm text-gray-600 mb-3">Social media webhook URLs for integrations</p>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>WhatsApp:</span>
+              <code className="bg-gray-100 px-2 py-1 rounded">/api/chat/webhooks/whatsapp</code>
+            </div>
+            <div className="flex justify-between">
+              <span>Facebook:</span>
+              <code className="bg-gray-100 px-2 py-1 rounded">/api/chat/webhooks/facebook</code>
+            </div>
+            <div className="flex justify-between">
+              <span>Instagram:</span>
+              <code className="bg-gray-100 px-2 py-1 rounded">/api/chat/webhooks/instagram</code>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

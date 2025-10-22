@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.database import SessionLocal, engine, Base
-from app.models import User, Subscription, SubscriptionPlan, SubscriptionStatus
+from app.models import User, Subscription, SubscriptionPlan, SubscriptionStatus, Organization, OrganizationPlan, OrganizationStatus
 from app.auth.jwt import get_password_hash
 
 def create_admin_user():
@@ -30,6 +30,24 @@ def create_admin_user():
             print(f"Username: {admin_exists.username}")
             return
 
+        # Get or create admin organization
+        admin_org = db.query(Organization).filter(Organization.domain == "admin").first()
+        if not admin_org:
+            admin_org = Organization(
+                name="Bangla Chat Pro Administration",
+                domain="admin",
+                description="Administrative organization for platform management",
+                plan=OrganizationPlan.ENTERPRISE,
+                status=OrganizationStatus.ACTIVE,
+                max_users=10,
+                max_ai_agents=50,
+                max_monthly_chats=100000,
+                is_active=True
+            )
+            db.add(admin_org)
+            db.commit()
+            db.refresh(admin_org)
+
         # Create admin user
         admin_email = "admin@bdchatpro.com"
         admin_username = "admin"
@@ -38,12 +56,14 @@ def create_admin_user():
         hashed_password = get_password_hash(admin_password)
 
         admin_user = User(
+            organization_id=admin_org.id,
             email=admin_email,
             username=admin_username,
             hashed_password=hashed_password,
             full_name="System Administrator",
             is_active=True,
-            is_superuser=True
+            is_superuser=True,
+            is_platform_admin=True
         )
 
         db.add(admin_user)
