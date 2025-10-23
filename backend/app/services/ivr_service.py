@@ -17,13 +17,23 @@ class IVRService:
     """Comprehensive IVR service for handling phone calls with AI assistance"""
 
     def __init__(self):
-        self.twilio_client = Client(
-            os.getenv("TWILIO_ACCOUNT_SID"),
-            os.getenv("TWILIO_AUTH_TOKEN")
-        )
+        self._twilio_client = None
         self.twilio_number = os.getenv("TWILIO_PHONE_NUMBER")
         self.ai_service = AIChatService()
         self.task_manager = BackgroundTaskService()
+
+    @property
+    def twilio_client(self):
+        """Lazy load Twilio client only when needed"""
+        if self._twilio_client is None:
+            account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+            auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+            if account_sid and auth_token:
+                self._twilio_client = Client(account_sid, auth_token)
+            else:
+                # Return a mock client or raise an error
+                raise ValueError("Twilio credentials not configured")
+        return self._twilio_client
 
         # IVR Menu Configuration
         self.ivr_menus = {
