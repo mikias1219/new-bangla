@@ -8,7 +8,7 @@ from twilio.rest import Client
 from sqlalchemy.orm import Session
 from ..models import Conversation, IVRCall, Organization
 from .ai_chat import AIChatService
-from .background_tasks import BackgroundTaskManager
+from .background_tasks import BackgroundTaskService
 import asyncio
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class IVRService:
         )
         self.twilio_number = os.getenv("TWILIO_PHONE_NUMBER")
         self.ai_service = AIChatService()
-        self.task_manager = BackgroundTaskManager()
+        self.task_manager = BackgroundTaskService()
 
         # IVR Menu Configuration
         self.ivr_menus = {
