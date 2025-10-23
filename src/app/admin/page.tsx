@@ -17,6 +17,7 @@ import {
   Settings,
   BarChart3,
   Play,
+  Phone,
   Mic,
   MicOff,
   Volume2,
