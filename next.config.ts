@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Force cache invalidation by generating unique build ID
+  generateBuildId: async () => {
+    return `build-${Date.now()}`
+  },
   serverRuntimeConfig: {
     PORT: 3002,
   },
