@@ -1,48 +1,50 @@
-import { NextRequest, NextResponse } from 'next/server';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ userId: string }> }
+  { params }: { params: { userId: string } }
 ) {
   try {
-    const authHeader = request.headers.get('authorization');
+    const cookieStore = cookies();
+    const token = cookieStore.get("token")?.value;
 
-    if (!authHeader) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Authorization header missing' },
+        { error: "No authentication token" },
         { status: 401 }
       );
     }
 
     const body = await request.json();
-    const { is_active } = body;
-    const { userId } = await params;
 
-    const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/status`, {
-      method: 'PUT',
+    // Forward the request to the backend
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
+    const response = await fetch(`${backendUrl}/admin/users/${params.userId}/status`, {
+      method: "PUT",
       headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ is_active }),
+      body: JSON.stringify(body),
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
+      const errorData = await response.text();
       return NextResponse.json(
-        { error: data.detail || 'Failed to update user status' },
+        { error: errorData || "Failed to update user status" },
         { status: response.status }
       );
     }
 
+    const data = await response.json();
     return NextResponse.json(data);
+
   } catch (error) {
-    console.error('User status update API error:', error);
+    console.error("Admin user status API error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

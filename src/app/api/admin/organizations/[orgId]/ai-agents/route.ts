@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-export async function PUT(
+export async function POST(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: { orgId: string } }
 ) {
   try {
     const cookieStore = cookies();
@@ -21,8 +21,8 @@ export async function PUT(
     // Forward the request to the backend
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
-    const response = await fetch(`${backendUrl}/admin/users/${params.userId}/admin`, {
-      method: "PUT",
+    const response = await fetch(`${backendUrl}/admin/organizations/${params.orgId}/ai-agents`, {
+      method: "POST",
       headers: {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -33,7 +33,7 @@ export async function PUT(
     if (!response.ok) {
       const errorData = await response.text();
       return NextResponse.json(
-        { error: errorData || "Failed to update user admin status" },
+        { error: errorData || "Failed to create AI agent" },
         { status: response.status }
       );
     }
@@ -42,7 +42,7 @@ export async function PUT(
     return NextResponse.json(data);
 
   } catch (error) {
-    console.error("Admin user admin API error:", error);
+    console.error("Admin create AI agent API error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

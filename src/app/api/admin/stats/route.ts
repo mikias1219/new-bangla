@@ -1,40 +1,44 @@
-import { NextRequest, NextResponse } from 'next/server';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
+    const cookieStore = cookies();
+    const token = cookieStore.get("token")?.value;
 
-    if (!authHeader) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Authorization header missing' },
+        { error: "No authentication token" },
         { status: 401 }
       );
     }
 
-    const response = await fetch(`${BACKEND_URL}/admin/stats`, {
-      method: 'GET',
+    // Forward the request to the backend
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
+    const response = await fetch(`${backendUrl}/admin/stats`, {
+      method: "GET",
       headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
+      const errorData = await response.text();
       return NextResponse.json(
-        { error: data.detail || 'Failed to fetch admin stats' },
+        { error: errorData || "Failed to fetch stats" },
         { status: response.status }
       );
     }
 
+    const data = await response.json();
     return NextResponse.json(data);
+
   } catch (error) {
-    console.error('Admin stats API error:', error);
+    console.error("Admin stats API error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
