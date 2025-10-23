@@ -6,7 +6,9 @@ from sqlalchemy.orm import Session
 from ..models import AIAgent, Conversation, Message, Organization
 import logging
 from .vector_store import VectorStore
+from .n8n_service import N8NService
 from datetime import datetime
+import asyncio
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -102,6 +104,31 @@ class AIChatService:
             agent.total_messages += 2
 
             db.commit()
+
+            # Log to n8n for audit trails (async, non-blocking)
+            try:
+                # Import here to avoid circular imports
+                from .n8n_service import log_chat_event_background
+                asyncio.create_task(log_chat_event_background(
+                    conversation_id=conversation_id,
+                    user_id=getattr(conversation.user, 'id', None) if hasattr(conversation, 'user') else None,
+                    organization_id=conversation.organization_id,
+                    message=message_text,
+                    sender_type="user",
+                    confidence_score=confidence_score
+                ))
+
+                # Log AI response as well
+                asyncio.create_task(log_chat_event_background(
+                    conversation_id=conversation_id,
+                    user_id=None,  # AI doesn't have user ID
+                    organization_id=conversation.organization_id,
+                    message=ai_response,
+                    sender_type="ai_agent",
+                    confidence_score=confidence_score
+                ))
+            except Exception as e:
+                logger.warning(f"Failed to log to n8n: {str(e)}")
 
             return ai_response
 

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from ..models import Conversation, IVRCall, Organization
 from .ai_chat import AIChatService
 from .background_tasks import BackgroundTaskManager
+from .n8n_service import log_ivr_event_background, log_escalation_event_background
 import asyncio
 
 logger = logging.getLogger(__name__)
@@ -310,6 +311,18 @@ class IVRService:
             ivr_call.escalated_at = datetime.utcnow()
             db.commit()
 
+            # Log escalation to n8n
+            try:
+                asyncio.create_task(log_escalation_event_background(
+                    conversation_id=ivr_call.conversation_id or 0,
+                    user_id=None,  # IVR calls don't have direct user IDs
+                    organization_id=ivr_call.organization_id or 1,
+                    reason="AI could not resolve query after multiple attempts",
+                    escalated_to="human_agent"
+                ))
+            except Exception as e:
+                logger.warning(f"Failed to log escalation to n8n: {str(e)}")
+
             response = VoiceResponse()
 
             # Inform user about escalation
@@ -399,6 +412,20 @@ class IVRService:
                 ivr_call.call_end_time = datetime.utcnow()
                 ivr_call.call_duration = (ivr_call.call_end_time - ivr_call.call_start_time).total_seconds()
                 db.commit()
+
+                # Log call completion to n8n
+                try:
+                    asyncio.create_task(log_ivr_event_background(
+                        call_sid=ivr_call.twilio_call_sid,
+                        from_number=ivr_call.from_number,
+                        to_number=ivr_call.to_number,
+                        organization_id=ivr_call.organization_id or 1,
+                        status="completed",
+                        duration=ivr_call.call_duration,
+                        ai_interactions=ivr_call.ai_interactions
+                    ))
+                except Exception as e:
+                    logger.warning(f"Failed to log call completion to n8n: {str(e)}")
 
                 logger.info(f"Call {call_sid} completed. Duration: {ivr_call.call_duration}s")
 
