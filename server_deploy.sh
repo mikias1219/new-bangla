@@ -180,8 +180,7 @@ print_status "Starting services with PM2..."
 pm2 delete bangla-chat-backend bangla-chat-frontend 2>/dev/null || true
 
 # Start backend
-cd $PROJECT_DIR/backend
-pm2 start --name bangla-chat-backend "source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"
+pm2 start --name bangla-chat-backend "cd $PROJECT_DIR/backend && source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"
 
 # Start frontend
 cd $PROJECT_DIR
