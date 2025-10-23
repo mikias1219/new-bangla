@@ -1329,6 +1329,28 @@ function AIAgentManagement({
   );
 }
 
+function IVRManagement({ calls, analytics, loading }: { calls: any[], analytics: any, loading: boolean }) {
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h3 className="text-lg font-medium text-gray-900 mb-4">IVR Call Management</h3>
+      <div className="text-center text-gray-500 py-8">
+        <p>IVR management functionality coming soon...</p>
+      </div>
+    </div>
+  );
+}
+
+function SystemManagement() {
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h3 className="text-lg font-medium text-gray-900 mb-4">System Management</h3>
+      <div className="text-center text-gray-500 py-8">
+        <p>System management functionality coming soon...</p>
+      </div>
+    </div>
+  );
+}
+
 function AnalyticsDashboard({ stats }: { stats: AdminStats | null }) {
   if (!stats) {
     return (
