@@ -15,6 +15,12 @@ class OrganizationStatus(str, enum.Enum):
     CANCELLED = "cancelled"
     TRIALING = "trialing"
 
+class IVRCallStatus(str, enum.Enum):
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    ESCALATED = "escalated"
+    FAILED = "failed"
+
 class Organization(Base):
     __tablename__ = "organizations"
 
@@ -60,6 +66,7 @@ class Organization(Base):
     training_documents = relationship("TrainingDocument", back_populates="organization", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="organization", cascade="all, delete-orphan")
     ai_agents = relationship("AIAgent", back_populates="organization", cascade="all, delete-orphan")
+    ivr_calls = relationship("IVRCall", back_populates="organization", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Organization(id={self.id}, name={self.name}, domain={self.domain})>"
@@ -180,6 +187,7 @@ class Conversation(Base):
     organization = relationship("Organization", back_populates="conversations")
     ai_agent = relationship("AIAgent", back_populates="conversations")
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan", order_by="Message.created_at")
+    ivr_calls = relationship("IVRCall", back_populates="conversation", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Conversation(id={self.id}, platform={self.platform}, status={self.status})>"
@@ -218,4 +226,54 @@ class Message(Base):
 
     def __repr__(self):
         return f"<Message(id={self.id}, sender_type={self.sender_type}, created_at={self.created_at})>"
+
+class IVRCall(Base):
+    __tablename__ = "ivr_calls"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Twilio call details
+    twilio_call_sid = Column(String, unique=True, nullable=False)
+    from_number = Column(String, nullable=False)
+    to_number = Column(String, nullable=False)
+
+    # Organization and conversation links
+    organization_id = Column(Integer, ForeignKey("organizations.id"))
+    conversation_id = Column(Integer, ForeignKey("conversations.id"))
+
+    # Call status and timing
+    status = Column(Enum(IVRCallStatus), nullable=False, default=IVRCallStatus.ACTIVE)
+    current_menu = Column(String, default="main")
+
+    call_start_time = Column(DateTime(timezone=True), server_default=func.now())
+    call_end_time = Column(DateTime(timezone=True))
+    call_duration = Column(Float)  # seconds
+
+    # Interaction tracking
+    input_attempts = Column(Integer, default=0)
+    no_input_count = Column(Integer, default=0)
+    ai_interactions = Column(Integer, default=0)
+    last_input_time = Column(DateTime(timezone=True))
+
+    # AI responses and escalation
+    last_ai_response = Column(Text)
+    escalated_at = Column(DateTime(timezone=True))
+
+    # Call metadata
+    language_used = Column(String, default="bn")  # bn for Bangla, en for English
+    user_intent = Column(String)  # order_status, product_info, support, etc.
+
+    # Quality metrics
+    call_quality_score = Column(Float)  # 1-5 scale
+    user_satisfaction = Column(Integer)  # 1-5 rating if collected
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    organization = relationship("Organization", back_populates="ivr_calls")
+    conversation = relationship("Conversation", back_populates="ivr_calls")
+
+    def __repr__(self):
+        return f"<IVRCall(id={self.id}, sid={self.twilio_call_sid}, status={self.status})>"
 

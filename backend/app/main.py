@@ -6,7 +6,7 @@ import uvicorn
 
 from .database import SessionLocal, engine, Base
 from .models import user, subscription, payment
-from .routers import auth, users, subscriptions, payments, ai_agent, admin, organizations, chat, analytics, billing
+from .routers import auth, users, subscriptions, payments, ai_agent, admin, organizations, chat, analytics, billing, ivr
 from .auth.jwt import JWTBearer
 from .utils.pii_masking import setup_logging_with_pii_masking
 
@@ -61,6 +61,7 @@ app.include_router(organizations.router, prefix="/organizations", tags=["Organiz
 app.include_router(chat.router, prefix="/chat", tags=["Chat"])
 app.include_router(analytics.router, prefix="/analytics", tags=["Analytics"])
 app.include_router(billing.router, prefix="/billing", tags=["Billing"])
+app.include_router(ivr.router, prefix="/ivr", tags=["IVR"])
 
 @app.get("/")
 async def root():
