@@ -851,6 +851,7 @@ export default function AdminDashboard() {
                 ivrTestStatus={ivrTestStatus}
                 ivrCurrentMenu={ivrCurrentMenu}
                 sendIvrTestInput={sendIvrTestInput}
+                simulateIvrInput={simulateIvrInput}
                 simulateDtmfInput={simulateDtmfInput}
                 clearIvrTest={clearIvrTest}
               />
@@ -1701,6 +1702,7 @@ const TestIVRCalls = React.memo(function TestIVRCalls({
   ivrTestStatus,
   ivrCurrentMenu,
   sendIvrTestInput,
+  simulateIvrInput,
   simulateDtmfInput,
   clearIvrTest
 }: {
@@ -1711,6 +1713,7 @@ const TestIVRCalls = React.memo(function TestIVRCalls({
   ivrTestStatus: string;
   ivrCurrentMenu: string;
   sendIvrTestInput: () => void;
+  simulateIvrInput: (input: string) => Promise<void>;
   simulateDtmfInput: (digit: string) => void;
   clearIvrTest: () => void;
 }) {
