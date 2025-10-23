@@ -17,7 +17,10 @@ def get_db():
         yield db
     finally:
         db.close()
-ivr_service = IVRService()
+
+def get_ivr_service():
+    """Lazy load IVR service to avoid import-time Twilio client creation"""
+    return IVRService()
 
 @router.post("/webhook/incoming-call")
 async def handle_incoming_call(request: Request, db: Session = Depends(get_db)):
@@ -30,7 +33,7 @@ async def handle_incoming_call(request: Request, db: Session = Depends(get_db)):
         logger.info(f"Incoming call webhook: {call_data}")
 
         # Process the incoming call
-        twiml_response = ivr_service.handle_incoming_call(call_data, db)
+        twiml_response = get_ivr_service().handle_incoming_call(call_data, db)
 
         return Response(content=twiml_response, media_type="application/xml")
 
@@ -54,7 +57,7 @@ async def process_ivr_input(request: Request, db: Session = Depends(get_db)):
         logger.info(f"IVR input webhook: {input_data}")
 
         # Process the input
-        twiml_response = ivr_service.process_ivr_input(input_data, db)
+        twiml_response = get_ivr_service().process_ivr_input(input_data, db)
 
         return Response(content=twiml_response, media_type="application/xml")
 
@@ -76,7 +79,7 @@ async def handle_call_completed(request: Request, db: Session = Depends(get_db))
 
         call_sid = call_data.get('CallSid')
         if call_sid:
-            ivr_service.end_call(call_sid, db)
+            get_ivr_service().end_call(call_sid, db)
             logger.info(f"Call {call_sid} completed")
 
         return {"status": "success"}
@@ -158,7 +161,7 @@ async def get_ivr_analytics(
         if organization_id not in user_org_ids:
             raise HTTPException(status_code=403, detail="Access denied")
 
-        analytics = ivr_service.get_call_analytics(organization_id, db)
+        analytics = get_ivr_service().get_call_analytics(organization_id, db)
 
         return analytics
 
