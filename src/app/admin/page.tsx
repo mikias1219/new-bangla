@@ -43,6 +43,14 @@ interface AdminStats {
     expired_subscriptions: number;
     revenue_this_month: number;
   };
+  ivr: {
+    total_calls: number;
+    completed_calls: number;
+    escalated_calls: number;
+    completion_rate: number;
+    escalation_rate: number;
+    average_duration: number;
+  };
   system: {
     total_conversations: number;
     total_messages: number;
@@ -77,6 +85,33 @@ interface User {
   subscription_status: string | null;
 }
 
+interface IVRCall {
+  id: number;
+  call_sid: string;
+  from_number: string;
+  to_number: string;
+  status: string;
+  current_menu: string;
+  call_duration: number | null;
+  ai_interactions: number;
+  language_used: string;
+  user_intent: string | null;
+  call_quality_score: number | null;
+  user_satisfaction: number | null;
+  created_at: string;
+  call_start_time: string | null;
+  call_end_time: string | null;
+}
+
+interface IVRCallAnalytics {
+  total_calls: number;
+  completed_calls: number;
+  escalated_calls: number;
+  completion_rate: number;
+  escalation_rate: number;
+  average_duration: number;
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -92,6 +127,13 @@ export default function AdminDashboard() {
   const [isTesting, setIsTesting] = useState(false);
   const [isVoiceTesting, setIsVoiceTesting] = useState(false);
 
+  // Test IVR states
+  const [ivrTestLogs, setIvrTestLogs] = useState<Array<{type: 'system' | 'user' | 'ivr' | 'ai', content: string, timestamp: Date}>>([]);
+  const [ivrTestInput, setIvrTestInput] = useState("");
+  const [isIvrTesting, setIsIvrTesting] = useState(false);
+  const [ivrTestStatus, setIvrTestStatus] = useState<string>("");
+  const [ivrCurrentMenu, setIvrCurrentMenu] = useState<string>("main");
+
   // AI Agent Management states
   const [showCreateAgentModal, setShowCreateAgentModal] = useState(false);
   const [selectedOrgForAgent, setSelectedOrgForAgent] = useState<number | null>(null);
@@ -100,6 +142,13 @@ export default function AdminDashboard() {
     description: "",
     systemPrompt: ""
   });
+
+  // IVR Management states
+  const [ivrCalls, setIvrCalls] = useState<IVRCall[]>([]);
+  const [ivrAnalytics, setIvrAnalytics] = useState<IVRCallAnalytics | null>(null);
+  const [ivrLoading, setIvrLoading] = useState(false);
+
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const router = useRouter();
 
@@ -211,6 +260,112 @@ export default function AdminDashboard() {
   const clearTestChat = () => {
     setTestMessages([]);
     setTestInput("");
+  };
+
+  // IVR Testing Functions
+  const simulateIvrInput = async (input: string) => {
+    setIsIvrTesting(true);
+    setIvrTestStatus("Processing...");
+
+    try {
+      // Log user input
+      const userLog = {
+        type: 'user' as const,
+        content: `User input: "${input}"`,
+        timestamp: new Date()
+      };
+      setIvrTestLogs(prev => [...prev, userLog]);
+
+      // Simulate IVR processing based on current menu
+      let aiResponse = "";
+      let newMenu = ivrCurrentMenu;
+
+      if (ivrCurrentMenu === "main") {
+        // Main menu logic
+        const lowerInput = input.toLowerCase();
+        if (lowerInput.includes("অর্ডার") || lowerInput.includes("order") || input === "1") {
+          aiResponse = "অর্ডার স্ট্যাটাস দেখার জন্য আপনার অর্ডার আইডি বলুন।\n\nPlease say your order ID to check order status.";
+          newMenu = "order";
+        } else if (lowerInput.includes("প্রোডাক্ট") || lowerInput.includes("product") || input === "2") {
+          aiResponse = "প্রোডাক্ট খোঁজার জন্য প্রোডাক্টের নাম বলুন।\n\nPlease say the product name you are looking for.";
+          newMenu = "product";
+        } else if (lowerInput.includes("সাপোর্ট") || lowerInput.includes("support") || input === "3") {
+          aiResponse = "আপনার সমস্যা বর্ণনা করুন।\n\nPlease describe your issue.";
+          newMenu = "support";
+        } else if (lowerInput.includes("মানুষ") || lowerInput.includes("human") || input === "4") {
+          aiResponse = "আপনাকে এখন একজন মানুষের সাথে সংযোগিত করছি। অনুগ্রহ করে অপেক্ষা করুন।\n\nConnecting you with a human agent. Please wait.";
+          newMenu = "escalated";
+        } else {
+          aiResponse = "দুঃখিত, বুঝতে পারলাম না। অনুগ্রহ করে আবার বলুন।\n\nSorry, I didn't understand. Please try again.";
+        }
+      } else if (ivrCurrentMenu === "order") {
+        // Order processing logic
+        aiResponse = `অর্ডার ${input} খুঁজে পাওয়া গেছে। আপনার অর্ডার "প্রসেসিং" অবস্থায় আছে এবং আগামী ২-৩ দিনের মধ্যে ডেলিভারি হবে।\n\nOrder ${input} found. Your order is in "Processing" status and will be delivered in 2-3 days.`;
+        newMenu = "main";
+      } else if (ivrCurrentMenu === "product") {
+        // Product search logic
+        aiResponse = `"${input}" প্রোডাক্ট খুঁজে পাওয়া গেছে। এটি বর্তমানে স্টকে আছে এবং দাম ১২৫০ টাকা।\n\nProduct "${input}" found. It is currently in stock and costs 1250 taka.`;
+        newMenu = "main";
+      } else if (ivrCurrentMenu === "support") {
+        // Support ticket logic
+        aiResponse = "আপনার সাপোর্ট টিকেট তৈরি করা হয়েছে। টিকেট নম্বর: SUP-2024-001। আমাদের টিম আপনার সাথে ২৪ ঘণ্টার মধ্যে যোগাযোগ করবে।\n\nYour support ticket has been created. Ticket number: SUP-2024-001. Our team will contact you within 24 hours.";
+        newMenu = "main";
+      }
+
+      // Update menu
+      setIvrCurrentMenu(newMenu);
+
+      // Log AI/IVR response
+      const aiLog = {
+        type: 'ivr' as const,
+        content: `IVR Response: ${aiResponse}`,
+        timestamp: new Date()
+      };
+      setIvrTestLogs(prev => [...prev, aiLog]);
+
+      // Log menu change
+      if (newMenu !== ivrCurrentMenu) {
+        const menuLog = {
+          type: 'system' as const,
+          content: `Menu changed to: ${newMenu}`,
+          timestamp: new Date()
+        };
+        setIvrTestLogs(prev => [...prev, menuLog]);
+      }
+
+      setIvrTestStatus("Response generated");
+
+    } catch (error) {
+      console.error("IVR test error:", error);
+      const errorLog = {
+        type: 'system' as const,
+        content: `Error: ${error}`,
+        timestamp: new Date()
+      };
+      setIvrTestLogs(prev => [...prev, errorLog]);
+      setIvrTestStatus("Error occurred");
+    } finally {
+      setIsIvrTesting(false);
+    }
+  };
+
+  const sendIvrTestInput = async () => {
+    if (!ivrTestInput.trim() || isIvrTesting) return;
+
+    const input = ivrTestInput.trim();
+    setIvrTestInput("");
+    await simulateIvrInput(input);
+  };
+
+  const clearIvrTest = () => {
+    setIvrTestLogs([]);
+    setIvrTestInput("");
+    setIvrTestStatus("");
+    setIvrCurrentMenu("main");
+  };
+
+  const simulateDtmfInput = async (digit: string) => {
+    await simulateIvrInput(digit);
   };
 
   // AI Agent Management Functions
@@ -349,6 +504,46 @@ export default function AdminDashboard() {
       console.error("Failed to load AI agents:", error);
     }
   };
+
+  const loadIVRCalls = async (organizationId: number = 1) => {
+    setIvrLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/ivr/calls/${organizationId}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIvrCalls(data.calls);
+      }
+    } catch (error) {
+      console.error("Failed to load IVR calls:", error);
+    } finally {
+      setIvrLoading(false);
+    }
+  };
+
+  const loadIVRAnalytics = async (organizationId: number = 1) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/ivr/analytics/${organizationId}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIvrAnalytics(data);
+      }
+    } catch (error) {
+      console.error("Failed to load IVR analytics:", error);
+    }
+  };
+
 
   const toggleUserStatus = async (userId: number, isActive: boolean) => {
     try {
@@ -523,6 +718,17 @@ export default function AdminDashboard() {
                   Test AI Agents
                 </button>
                 <button
+                  onClick={() => setActiveTab("test-ivr")}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
+                    activeTab === "test-ivr"
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <Phone className="w-5 h-5" />
+                  Test IVR Calls
+                </button>
+                <button
                   onClick={() => setActiveTab("analytics")}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
                     activeTab === "analytics"
@@ -532,6 +738,21 @@ export default function AdminDashboard() {
                 >
                   <BarChart3 className="w-5 h-5" />
                   Analytics
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab("ivr");
+                    loadIVRCalls();
+                    loadIVRAnalytics();
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
+                    activeTab === "ivr"
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <Phone className="w-5 h-5" />
+                  IVR Calls
                 </button>
                 <button
                   onClick={() => setActiveTab("system")}
@@ -588,7 +809,21 @@ export default function AdminDashboard() {
                 clearTestChat={clearTestChat}
               />
             )}
+            {activeTab === "test-ivr" && (
+              <TestIVRCalls
+                ivrTestLogs={ivrTestLogs}
+                ivrTestInput={ivrTestInput}
+                setIvrTestInput={setIvrTestInput}
+                isIvrTesting={isIvrTesting}
+                ivrTestStatus={ivrTestStatus}
+                ivrCurrentMenu={ivrCurrentMenu}
+                sendIvrTestInput={sendIvrTestInput}
+                simulateDtmfInput={simulateDtmfInput}
+                clearIvrTest={clearIvrTest}
+              />
+            )}
             {activeTab === "analytics" && <AnalyticsDashboard stats={stats} />}
+            {activeTab === "ivr" && <IVRManagement calls={ivrCalls} analytics={ivrAnalytics} loading={ivrLoading} />}
             {activeTab === "subscriptions" && <SubscriptionManagement />}
             {activeTab === "system" && <SystemManagement />}
           </div>
@@ -1416,6 +1651,272 @@ function TestAIAgents({
                 <div>• Voice in all languages</div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// Test IVR Calls Component
+function TestIVRCalls({
+  ivrTestLogs,
+  ivrTestInput,
+  setIvrTestInput,
+  isIvrTesting,
+  ivrTestStatus,
+  ivrCurrentMenu,
+  sendIvrTestInput,
+  simulateDtmfInput,
+  clearIvrTest
+}: {
+  ivrTestLogs: Array<{type: 'system' | 'user' | 'ivr' | 'ai', content: string, timestamp: Date}>;
+  ivrTestInput: string;
+  setIvrTestInput: (input: string) => void;
+  isIvrTesting: boolean;
+  ivrTestStatus: string;
+  ivrCurrentMenu: string;
+  sendIvrTestInput: () => void;
+  simulateDtmfInput: (digit: string) => void;
+  clearIvrTest: () => void;
+}) {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [ivrTestLogs]);
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendIvrTestInput();
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">Test IVR Call System</h2>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Phone className="w-4 h-4" />
+          Simulate IVR interactions and test call flows
+        </div>
+      </div>
+
+      {/* IVR Status Panel */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">IVR Status</h3>
+          <div className="flex items-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${isIvrTesting ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
+            <span className="text-sm text-gray-600">
+              {isIvrTesting ? 'Processing...' : 'Ready'}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gray-50 rounded-lg p-4">
+            <p className="text-sm font-medium text-gray-600">Current Menu</p>
+            <p className="text-lg font-semibold text-blue-600 capitalize">{ivrCurrentMenu}</p>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-4">
+            <p className="text-sm font-medium text-gray-600">Status</p>
+            <p className="text-lg font-semibold text-gray-900">{ivrTestStatus || 'Waiting for input'}</p>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-4">
+            <p className="text-sm font-medium text-gray-600">Total Interactions</p>
+            <p className="text-lg font-semibold text-purple-600">{ivrTestLogs.length}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Testing Interface */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* IVR Chat Log */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">IVR Interaction Log</h3>
+              <button
+                onClick={clearIvrTest}
+                className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+              >
+                Clear Log
+              </button>
+            </div>
+
+            <div className="h-96 overflow-y-auto p-4 space-y-3">
+              {ivrTestLogs.length === 0 ? (
+                <div className="text-center text-gray-500 py-12">
+                  <Phone className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>Start testing by entering input below</p>
+                  <p className="text-sm">Try saying "অর্ডার" or pressing "1" for order status</p>
+                </div>
+              ) : (
+                ivrTestLogs.map((log, index) => (
+                  <div
+                    key={index}
+                    className={`flex gap-3 ${
+                      log.type === 'user' ? 'justify-end' : 'justify-start'
+                    }`}
+                  >
+                    {log.type !== 'user' && (
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
+                        log.type === 'ivr' ? 'bg-blue-500' :
+                        log.type === 'system' ? 'bg-gray-500' : 'bg-green-500'
+                      }`}>
+                        {log.type === 'ivr' ? '🎯' : log.type === 'system' ? '⚙️' : '��'}
+                      </div>
+                    )}
+
+                    <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                      log.type === 'user'
+                        ? 'bg-blue-600 text-white'
+                        : log.type === 'ivr'
+                        ? 'bg-blue-100 text-blue-900'
+                        : log.type === 'system'
+                        ? 'bg-gray-100 text-gray-900'
+                        : 'bg-green-100 text-green-900'
+                    }`}>
+                      <p className="text-sm whitespace-pre-wrap">{log.content}</p>
+                      <p className="text-xs opacity-70 mt-1">
+                        {log.timestamp.toLocaleTimeString()}
+                      </p>
+                    </div>
+
+                    {log.type === 'user' && (
+                      <div className="w-8 h-8 rounded-full bg-gray-500 flex items-center justify-center text-white text-sm font-medium">
+                        👤
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+        </div>
+
+        {/* Control Panel */}
+        <div className="space-y-6">
+          {/* Text Input */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Speech Input (Text Simulation)</h4>
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={ivrTestInput}
+                onChange={(e) => setIvrTestInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type what you would say to IVR..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={isIvrTesting}
+              />
+              <button
+                onClick={sendIvrTestInput}
+                disabled={!ivrTestInput.trim() || isIvrTesting}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+                Send Speech Input
+              </button>
+            </div>
+          </div>
+
+          {/* DTMF Keypad */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">DTMF Keypad (Phone Keys)</h4>
+            <div className="grid grid-cols-3 gap-2">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, '*', 0, '#'].map((digit) => (
+                <button
+                  key={digit}
+                  onClick={() => simulateDtmfInput(digit.toString())}
+                  disabled={isIvrTesting}
+                  className="aspect-square bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-lg font-semibold transition-colors flex items-center justify-center"
+                >
+                  {digit}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-3">
+              Press keys to simulate phone button presses
+            </p>
+          </div>
+
+          {/* Quick Commands */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Quick Test Commands</h4>
+            <div className="space-y-2">
+              {[
+                { label: 'অর্ডার স্ট্যাটাস / Order Status', command: 'অর্ডার' },
+                { label: 'প্রোডাক্ট তথ্য / Product Info', command: 'প্রোডাক্ট' },
+                { label: 'সাপোর্ট / Support', command: 'সাপোর্ট' },
+                { label: 'মানুষের সাথে কথা / Human Agent', command: 'মানুষ' },
+                { label: 'পুনরায় শুনুন / Repeat Menu', command: '0' }
+              ].map((item) => (
+                <button
+                  key={item.command}
+                  onClick={() => simulateIvrInput(item.command)}
+                  disabled={isIvrTesting}
+                  className="w-full text-left px-3 py-2 bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+                >
+                  <span className="text-sm text-gray-700">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Menu Guide */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">IVR Menu Guide</h4>
+            <div className="space-y-2 text-xs text-gray-600">
+              <div>
+                <strong>Main Menu:</strong><br />
+                1: অর্ডার স্ট্যাটাস<br />
+                2: প্রোডাক্ট তথ্য<br />
+                3: সাপোর্ট<br />
+                4: মানুষের সাথে কথা
+              </div>
+              <div>
+                <strong>Current Menu:</strong><br />
+                <span className="font-medium text-blue-600 capitalize">{ivrCurrentMenu}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Status Panel */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* Status Indicators */}
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm text-gray-700">IVR System</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span className="text-sm text-gray-700">Bangla Language</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+              <span className="text-sm text-gray-700">AI Processing</span>
+            </div>
+          </div>
+
+          <div className="text-sm text-gray-500">
+            Test Mode - Simulates IVR behavior without real calls
           </div>
         </div>
       </div>
