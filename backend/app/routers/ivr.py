@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..database import get_db
+from ..database import SessionLocal
 from ..services.ivr_service import IVRService
 from ..models import Organization, IVRCall
 from ..auth.jwt import get_current_user
@@ -10,6 +10,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 ivr_service = IVRService()
 
 @router.post("/webhook/incoming-call")
