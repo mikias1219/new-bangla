@@ -407,6 +407,12 @@ export default function AdminDashboard() {
 
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Authentication token not found. Please log in again.");
+        router.push("/login");
+        return;
+      }
+
       const response = await fetch(`/api/admin/organizations/${selectedOrgForAgent}/ai-agents`, {
         method: "POST",
         headers: {
@@ -427,19 +433,33 @@ export default function AdminDashboard() {
         setNewAgentData({ name: "", description: "", systemPrompt: "" });
         setSelectedOrgForAgent(null);
         await loadAiAgents(); // Refresh the list
+      } else if (response.status === 401) {
+        alert("Authentication expired. Please log in again.");
+        localStorage.removeItem("token");
+        router.push("/login");
       } else {
-        const error = await response.json();
-        alert(`Failed to create AI agent: ${error.detail}`);
+        try {
+          const error = await response.json();
+          alert(`Failed to create AI agent: ${error.detail}`);
+        } catch {
+          alert("Failed to create AI agent");
+        }
       }
     } catch (error) {
       console.error("Create agent error:", error);
-      alert("Failed to create AI agent. Please try again.");
+      alert("Failed to create AI agent. Please check your connection.");
     }
   };
 
   const toggleAgentStatus = async (agentId: number, isActive: boolean) => {
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Authentication token not found. Please log in again.");
+        router.push("/login");
+        return;
+      }
+
       const response = await fetch(`/api/admin/ai-agents/${agentId}/status`, {
         method: "PUT",
         headers: {
@@ -452,13 +472,21 @@ export default function AdminDashboard() {
       if (response.ok) {
         alert(`AI Agent ${!isActive ? 'activated' : 'deactivated'} successfully!`);
         await loadAiAgents(); // Refresh the list
+      } else if (response.status === 401) {
+        alert("Authentication expired. Please log in again.");
+        localStorage.removeItem("token");
+        router.push("/login");
       } else {
-        const error = await response.json();
-        alert(`Failed to update agent status: ${error.detail}`);
+        try {
+          const error = await response.json();
+          alert(`Failed to update agent status: ${error.detail}`);
+        } catch {
+          alert("Failed to update agent status");
+        }
       }
     } catch (error) {
       console.error("Toggle agent status error:", error);
-      alert("Failed to update agent status. Please try again.");
+      alert("Failed to update agent status. Please check your connection.");
     }
   };
 
@@ -581,6 +609,12 @@ export default function AdminDashboard() {
   const toggleUserStatus = async (userId: number, isActive: boolean) => {
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Authentication token not found. Please log in again.");
+        router.push("/login");
+        return;
+      }
+
       const response = await fetch(`/api/admin/users/${userId}/status`, {
         method: "PUT",
         headers: {
@@ -593,18 +627,28 @@ export default function AdminDashboard() {
       if (response.ok) {
         await loadUsers(); // Refresh user list
         alert(`User ${isActive ? 'activated' : 'deactivated'} successfully`);
+      } else if (response.status === 401) {
+        alert("Authentication expired. Please log in again.");
+        localStorage.removeItem("token");
+        router.push("/login");
       } else {
         alert("Failed to update user status");
       }
     } catch (error) {
       console.error("Failed to toggle user status:", error);
-      alert("Failed to update user status");
+      alert("Failed to update user status. Please check your connection.");
     }
   };
 
   const toggleAdminStatus = async (userId: number, isSuperuser: boolean) => {
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Authentication token not found. Please log in again.");
+        router.push("/login");
+        return;
+      }
+
       const response = await fetch(`/api/admin/users/${userId}/admin`, {
         method: "PUT",
         headers: {
@@ -617,12 +661,16 @@ export default function AdminDashboard() {
       if (response.ok) {
         await loadUsers(); // Refresh user list
         alert(`Admin privileges ${isSuperuser ? 'granted' : 'revoked'} successfully`);
+      } else if (response.status === 401) {
+        alert("Authentication expired. Please log in again.");
+        localStorage.removeItem("token");
+        router.push("/login");
       } else {
         alert("Failed to update admin status");
       }
     } catch (error) {
       console.error("Failed to toggle admin status:", error);
-      alert("Failed to update admin status");
+      alert("Failed to update admin status. Please check your connection.");
     }
   };
 
