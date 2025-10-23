@@ -22,6 +22,9 @@ def get_ivr_service():
     """Lazy load IVR service to avoid import-time Twilio client creation"""
     return IVRService()
 
+# Remove the module-level service instantiation
+# ivr_service = IVRService()  # This was causing import-time Twilio client creation
+
 @router.post("/webhook/incoming-call")
 async def handle_incoming_call(request: Request, db: Session = Depends(get_db)):
     """Handle incoming Twilio calls"""
