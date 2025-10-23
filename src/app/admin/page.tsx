@@ -155,24 +155,49 @@ export default function AdminDashboard() {
 
   const checkAdminAccess = useCallback(async () => {
     try {
-      const token = localStorage.getItem("token");
+      // Safely check localStorage
+      let token;
+      try {
+        token = localStorage.getItem("token");
+      } catch (storageError) {
+        console.warn("localStorage access failed:", storageError);
+        router.push("/login");
+        return;
+      }
+
       if (!token) {
         router.push("/login");
         return;
       }
 
       // Check if user is admin by fetching their profile
-      const response = await fetch("/api/users/me", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch user data");
+      let response;
+      try {
+        response = await fetch("/api/users/me", {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+      } catch (fetchError) {
+        console.error("API call failed:", fetchError);
+        router.push("/login");
+        return;
       }
 
-      const userData = await response.json();
+      if (!response.ok) {
+        console.error("API response not ok:", response.status);
+        router.push("/login");
+        return;
+      }
+
+      let userData;
+      try {
+        userData = await response.json();
+      } catch (parseError) {
+        console.error("Failed to parse user data:", parseError);
+        router.push("/login");
+        return;
+      }
 
       // Check if user is superuser (admin)
       if (!userData.is_superuser) {
@@ -181,11 +206,18 @@ export default function AdminDashboard() {
         return;
       }
 
-      // Load admin data
-      await loadAdminStats();
-      await loadUsers();
-      await loadOrganizations();
-      await loadAiAgents();
+      // Load admin data with error handling
+      try {
+        await Promise.allSettled([
+          loadAdminStats(),
+          loadUsers(),
+          loadOrganizations(),
+          loadAiAgents()
+        ]);
+      } catch (dataError) {
+        console.error("Failed to load admin data:", dataError);
+        // Don't redirect, just show error state
+      }
 
     } catch (error) {
       console.error("Admin access check failed:", error);
