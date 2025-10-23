@@ -570,6 +570,12 @@ export default function AdminDashboard() {
     setIvrLoading(true);
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        console.warn("No authentication token available for IVR calls");
+        setIvrCalls([]);
+        return;
+      }
+
       const response = await fetch(`/ivr/calls/${organizationId}`, {
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -578,10 +584,17 @@ export default function AdminDashboard() {
 
       if (response.ok) {
         const data = await response.json();
-        setIvrCalls(data.calls);
+        setIvrCalls(data.calls || []);
+      } else if (response.status === 404) {
+        console.info("IVR calls endpoint not implemented yet, using empty data");
+        setIvrCalls([]);
+      } else {
+        console.warn("Failed to load IVR calls:", response.status);
+        setIvrCalls([]);
       }
     } catch (error) {
-      console.error("Failed to load IVR calls:", error);
+      console.warn("IVR calls endpoint not available, using empty data:", error);
+      setIvrCalls([]);
     } finally {
       setIvrLoading(false);
     }
@@ -590,6 +603,12 @@ export default function AdminDashboard() {
   const loadIVRAnalytics = async (organizationId: number = 1) => {
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        console.warn("No authentication token available for IVR analytics");
+        setIvrAnalytics({});
+        return;
+      }
+
       const response = await fetch(`/ivr/analytics/${organizationId}`, {
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -599,9 +618,16 @@ export default function AdminDashboard() {
       if (response.ok) {
         const data = await response.json();
         setIvrAnalytics(data);
+      } else if (response.status === 404) {
+        console.info("IVR analytics endpoint not implemented yet, using empty data");
+        setIvrAnalytics({});
+      } else {
+        console.warn("Failed to load IVR analytics:", response.status);
+        setIvrAnalytics({});
       }
     } catch (error) {
-      console.error("Failed to load IVR analytics:", error);
+      console.warn("IVR analytics endpoint not available, using empty data:", error);
+      setIvrAnalytics({});
     }
   };
 
