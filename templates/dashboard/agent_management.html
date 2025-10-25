@@ -1,0 +1,310 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block page_title %}Agent Management{% endblock %}
+
+{% block page_content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'dashboard:home' %}">Dashboard</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Agent Management</li>
+  </ol>
+</nav>
+
+<!-- Header with Create Button -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Agent Management</h2>
+        <p class="text-muted mb-0">Manage your AI agents and human support staff</p>
+    </div>
+    <button class="btn btn-primary-modern" data-bs-toggle="modal" data-bs-target="#createAgentModal">
+        <i class="fas fa-plus me-2"></i>
+        Create Human Agent
+    </button>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card card-modern">
+            <div class="card-body text-center">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="fas fa-robot text-primary fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-primary">{{ total_agents }}</h4>
+                <p class="text-muted mb-0">Total Agents</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card card-modern">
+            <div class="card-body text-center">
+                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="fas fa-circle text-success fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-success">{{ active_agents }}</h4>
+                <p class="text-muted mb-0">Active Agents</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card card-modern">
+            <div class="card-body text-center">
+                <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="fas fa-comments text-info fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-info">{{ total_conversations }}</h4>
+                <p class="text-muted mb-0">Total Conversations</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card card-modern">
+            <div class="card-body text-center">
+                <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="fas fa-clock text-warning fa-2x"></i>
+                </div>
+                <h4 class="fw-bold text-warning">{{ agent_performance|length }}</h4>
+                <p class="text-muted mb-0">AI Agents</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="card card-modern mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" placeholder="Search agents..." id="searchInput">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="statusFilter">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="training">Training</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="typeFilter">
+                    <option value="">All Types</option>
+                    <option value="ai">AI Agent</option>
+                    <option value="human">Human Agent</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                    <i class="fas fa-times me-1"></i>
+                    Clear
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Agents Table -->
+<div class="card card-modern">
+    <div class="card-header bg-white">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-users me-2 text-primary"></i>
+            Agents
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if agents %}
+        <div class="table-responsive">
+            <table class="table table-hover" id="agentsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Contact</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for agent in agents %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if agent.avatar %}
+                                <img src="{{ agent.avatar.url }}" class="rounded-circle me-3" width="40" height="40" alt="Avatar">
+                                {% else %}
+                                <div class="bg-primary bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-robot text-primary"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="fw-semibold">{{ agent.name }}</div>
+                                    <small class="text-muted">{{ agent.model_provider|title }} {{ agent.model_name }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">AI Agent</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if agent.status == 'active' %}success{% elif agent.status == 'inactive' %}secondary{% else %}warning{% endif %}">
+                                {{ agent.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="text-muted">N/A</span>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" title="Deactivate">
+                                    <i class="fas fa-ban"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No agents found</h5>
+            <p class="text-muted">Create your first AI agent to get started.</p>
+            <button class="btn btn-primary-modern">
+                <i class="fas fa-plus me-2"></i>
+                Create AI Agent
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Create Human Agent Modal -->
+<div class="modal fade" id="createAgentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create Human Agent</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">First Name</label>
+                            <input type="text" class="form-control" name="first_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" class="form-control" name="last_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" name="email" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone</label>
+                            <input type="tel" class="form-control" name="phone">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Role</label>
+                            <select class="form-select" name="role" required>
+                                <option value="">Select Role</option>
+                                <option value="support">Support Agent</option>
+                                <option value="senior">Senior Support Agent</option>
+                                <option value="manager">Support Manager</option>
+                                <option value="specialist">Technical Specialist</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Specializations</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="specializations" value="technical" id="tech">
+                                        <label class="form-check-label" for="tech">Technical Support</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="specializations" value="billing" id="billing">
+                                        <label class="form-check-label" for="billing">Billing & Payments</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="specializations" value="general" id="general">
+                                        <label class="form-check-label" for="general">General Inquiries</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="specializations" value="escalation" id="escalation">
+                                        <label class="form-check-label" for="escalation">Escalation Handling</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-modern">Create Agent</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_scripts %}
+<script>
+// Search functionality
+document.getElementById('searchInput').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#agentsTable tbody tr');
+
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+});
+
+// Filter functionality
+document.getElementById('statusFilter').addEventListener('change', filterTable);
+document.getElementById('typeFilter').addEventListener('change', filterTable);
+
+function filterTable() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const typeFilter = document.getElementById('typeFilter').value;
+    const rows = document.querySelectorAll('#agentsTable tbody tr');
+
+    rows.forEach(row => {
+        const status = row.cells[2].textContent.toLowerCase().trim();
+        const type = row.cells[1].textContent.toLowerCase().trim();
+
+        const statusMatch = !statusFilter || status.includes(statusFilter);
+        const typeMatch = !typeFilter || type.includes(typeFilter);
+
+        row.style.display = statusMatch && typeMatch ? '' : 'none';
+    });
+}
+
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('typeFilter').value = '';
+
+    const rows = document.querySelectorAll('#agentsTable tbody tr');
+    rows.forEach(row => row.style.display = '');
+}
+</script>
+{% endblock %}
+{% endblock %}

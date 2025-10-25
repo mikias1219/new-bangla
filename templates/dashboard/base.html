@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard - BanglaChatPro{% endblock %}
+
+{% block extra_head %}
+<style>
+/* Dashboard Layout Styles */
+.dashboard-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f8fafc;
+}
+
+.sidebar {
+    width: 280px;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: white;
+    position: fixed;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    overflow-y: auto;
+    transition: transform 0.3s ease;
+}
+
+.sidebar.collapsed {
+    transform: translateX(-280px);
+}
+
+.main-content {
+    flex: 1;
+    margin-left: 280px;
+    transition: margin-left 0.3s ease;
+}
+
+.main-content.expanded {
+    margin-left: 0;
+}
+
+.header {
+    background: white;
+    height: 70px;
+    border-bottom: 1px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.content-area {
+    padding: 2rem;
+    max-width: 100%;
+}
+
+.card-modern {
+    background: white;
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.3s ease;
+}
+
+.card-modern:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-primary-modern {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    transition: transform 0.2s ease;
+}
+
+.btn-primary-modern:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.nav-link-modern {
+    color: #64748b;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    margin-bottom: 0.25rem;
+}
+
+.nav-link-modern:hover,
+.nav-link-modern.active {
+    background-color: #f1f5f9;
+    color: #1e293b;
+    text-decoration: none;
+}
+
+.sidebar-nav .nav-link {
+    color: #cbd5e1;
+    padding: 0.75rem 1.5rem;
+    margin: 0.25rem 1rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.sidebar-nav .nav-link:hover,
+.sidebar-nav .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    text-decoration: none;
+}
+
+.sidebar-nav .nav-link i {
+    width: 20px;
+    margin-right: 12px;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-280px);
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="p-4">
+            <!-- Logo -->
+            <div class="d-flex align-items-center mb-4">
+                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <i class="fas fa-robot text-white"></i>
+                </div>
+                <span class="ms-3 fw-bold fs-5">BanglaChatPro</span>
+            </div>
+
+            <!-- Navigation -->
+            <ul class="nav flex-column sidebar-nav">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'dashboard:home' %}">
+                        <i class="fas fa-home"></i>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'conversations' %}active{% endif %}" href="{% url 'dashboard:conversations' %}">
+                        <i class="fas fa-comments"></i>
+                        Conversations Log
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'agent_management' %}active{% endif %}" href="{% url 'dashboard:agent_management' %}">
+                        <i class="fas fa-users"></i>
+                        Agent Management
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'intents_training' %}active{% endif %}" href="{% url 'dashboard:intents_training' %}">
+                        <i class="fas fa-edit"></i>
+                        Intents & Training
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'system_settings' %}active{% endif %}" href="{% url 'dashboard:system_settings' %}">
+                        <i class="fas fa-cog"></i>
+                        System Settings
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}" href="{% url 'dashboard:analytics' %}">
+                        <i class="fas fa-chart-bar"></i>
+                        Analytics & Reports
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'review_ratings' %}active{% endif %}" href="{% url 'dashboard:review_ratings' %}">
+                        <i class="fas fa-star"></i>
+                        Review & Ratings
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'security_logs' %}active{% endif %}" href="{% url 'dashboard:security_logs' %}">
+                        <i class="fas fa-shield-alt"></i>
+                        Security & Logs
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content" id="main-content">
+        <!-- Header -->
+        <header class="header d-flex align-items-center justify-content-between px-4">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-link text-dark d-md-none me-3" id="sidebar-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1 class="h4 mb-0 fw-bold">{% block page_title %}Dashboard{% endblock %}</h1>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <!-- Theme Toggle -->
+                <button class="btn btn-link text-dark" id="theme-toggle">
+                    <i class="fas fa-sun"></i>
+                </button>
+
+                <!-- Notifications -->
+                <div class="dropdown">
+                    <button class="btn btn-link text-dark position-relative" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-bell"></i>
+                        {% if notifications %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            {{ notifications|length }}
+                        </span>
+                        {% endif %}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" style="width: 300px;">
+                        <li><h6 class="dropdown-header">Notifications</h6></li>
+                        {% for notification in notifications %}
+                        <li>
+                            <a class="dropdown-item" href="#">
+                                <div class="d-flex">
+                                    <div class="flex-grow-1">
+                                        <div class="fw-semibold">{{ notification.title }}</div>
+                                        <small class="text-muted">{{ notification.message|truncatechars:50 }}</small>
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                        {% endfor %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-center" href="#">View all notifications</a></li>
+                    </ul>
+                </div>
+
+                <!-- User Avatar -->
+                <div class="dropdown">
+                    <button class="btn btn-link text-dark d-flex align-items-center" type="button" data-bs-toggle="dropdown">
+                        {% if user.avatar %}
+                        <img src="{{ user.avatar.url }}" class="rounded-circle" width="32" height="32" alt="Avatar">
+                        {% else %}
+                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                            <span class="text-white fw-bold">{{ user.first_name|first|default:user.username|first|upper }}</span>
+                        </div>
+                        {% endif %}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">{{ user.get_full_name|default:user.username }}</h6></li>
+                        <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="fas fa-user me-2"></i>Profile</a></li>
+                        <li><a class="dropdown-item" href="{% url 'accounts:password_change' %}"><i class="fas fa-key me-2"></i>Change Password</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="content-area">
+            {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% block page_content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+{% block extra_scripts %}
+<script>
+// Sidebar toggle functionality
+document.getElementById('sidebar-toggle').addEventListener('click', function() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+
+    sidebar.classList.toggle('show');
+});
+
+// Theme toggle (placeholder for future implementation)
+document.getElementById('theme-toggle').addEventListener('click', function() {
+    const icon = this.querySelector('i');
+    if (icon.classList.contains('fa-sun')) {
+        icon.classList.remove('fa-sun');
+        icon.classList.add('fa-moon');
+    } else {
+        icon.classList.remove('fa-moon');
+        icon.classList.add('fa-sun');
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

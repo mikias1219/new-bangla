@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Server-side deployment script for Bangla Chat Pro
+# Django deployment script for Bangla Chat Pro
 # Run this on the server after pushing changes to GitHub
 
-echo "🚀 Bangla Chat Pro Server Deployment..."
+echo "🚀 Bangla Chat Pro Django Deployment..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -44,9 +44,9 @@ else
     cd $PROJECT_DIR && git pull origin main || git pull origin master
 fi
 
-# 2. Setup backend
-print_status "Setting up backend..."
-cd $PROJECT_DIR/backend
+# 2. Setup Django application
+print_status "Setting up Django application..."
+cd $PROJECT_DIR
 
 # Create virtual environment if it doesn't exist
 if [ ! -d "venv" ]; then
@@ -62,39 +62,62 @@ pip install -r requirements.txt
 # Create/update .env file
 print_status "Setting up environment variables..."
 cat > .env << 'EOF'
-DATABASE_URL=sqlite:///./bangla_chat_pro.db
-SECRET_KEY=your-super-secret-jwt-key-change-this-in-production-2025
+SECRET_KEY=django-insecure-production-key-change-this-2025
+DEBUG=False
+ALLOWED_HOSTS=bdchatpro.com,www.bdchatpro.com,localhost,127.0.0.1
+DB_NAME=bangla_chat_pro
+DB_USER=bangla_chat
+DB_PASSWORD=secure_password_2025
+DB_HOST=localhost
+DB_PORT=5432
+VOICE_API_KEY=
+VOICE_API_ENDPOINT=
 OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
 STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 EOF
 
-# Setup IVR database tables
-print_status "Setting up IVR database tables..."
-python3 add_ivr_table.py
+# Run Django migrations
+print_status "Running Django migrations..."
+python manage.py migrate
+
+# Collect static files
+print_status "Collecting static files..."
+python manage.py collectstatic --noinput
 
 # Create admin user if it doesn't exist
 print_status "Ensuring admin user exists..."
-python3 create_admin.py
+python manage.py shell -c "
+from accounts.models import Organization, User
+from django.contrib.auth import get_user_model
 
-# 3. Setup frontend
-print_status "Setting up frontend..."
-cd $PROJECT_DIR
+# Create organization
+org, created = Organization.objects.get_or_create(
+    name='BanglaChatPro',
+    defaults={
+        'is_active': True,
+        'description': 'AI-powered customer service platform',
+        'max_users': 100,
+        'max_conversations': 10000
+    }
+)
 
-# Install dependencies
-print_status "Installing Node dependencies..."
-npm install
-
-# Create production environment file
-print_status "Setting up frontend environment..."
-cat > .env.local << 'EOF'
-NEXT_PUBLIC_BACKEND_URL=https://bdchatpro.com/api
-NEXT_PUBLIC_SITE_URL=https://bdchatpro.com
-EOF
-
-# Build frontend
-print_status "Building frontend..."
-npm run build
+# Create superuser
+User = get_user_model()
+if not User.objects.filter(username='admin').exists():
+    admin = User.objects.create_superuser(
+        username='admin',
+        email='admin@bdchatpro.com',
+        password='admin123',
+        first_name='Admin',
+        last_name='User',
+        organization=org,
+        is_admin=True
+    )
+    print('Superuser created')
+else:
+    print('Superuser already exists')
+"
 
 # 4. Configure Nginx (if not already configured)
 print_status "Ensuring Nginx configuration..."
@@ -103,7 +126,7 @@ if [ ! -f "/etc/nginx/sites-enabled/bdchatpro" ]; then
 
     # Create Nginx configuration
     cat > /etc/nginx/sites-available/bdchatpro << 'EOF'
-# Frontend (Next.js)
+# Django Application
 server {
     listen 80;
     server_name bdchatpro.com www.bdchatpro.com;
@@ -121,22 +144,23 @@ server {
     gzip_min_length 1024;
     gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
 
-    # Frontend routes
-    location / {
-        proxy_pass http://localhost:3002;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
+    # Django static files
+    location /static/ {
+        alias /root/bangla-chat-pro/staticfiles/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
     }
 
-    # Backend API routes
-    location /api/ {
-        proxy_pass http://localhost:8000/;
+    # Django media files
+    location /media/ {
+        alias /root/bangla-chat-pro/media/;
+        expires 30d;
+        add_header Cache-Control "public";
+    }
+
+    # Django application
+    location / {
+        proxy_pass http://localhost:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -173,21 +197,31 @@ if [ ! -d "/etc/letsencrypt/live/bdchatpro.com" ]; then
     certbot --nginx -d bdchatpro.com -d www.bdchatpro.com --non-interactive --agree-tos --email admin@bdchatpro.com
 fi
 
-# 6. Start/restart services with PM2
-print_status "Starting services with PM2..."
+# 6. Setup systemd service for Django
+print_status "Setting up Django systemd service..."
 
-# Stop existing processes
-pm2 delete bangla-chat-backend bangla-chat-frontend 2>/dev/null || true
+# Create systemd service file
+cat > /etc/systemd/system/bangla-chat-pro.service << EOF
+[Unit]
+Description=Bangla Chat Pro Django Application
+After=network.target
 
-# Start backend
-pm2 start --name bangla-chat-backend "cd $PROJECT_DIR/backend && source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"
+[Service]
+User=root
+Group=root
+WorkingDirectory=$PROJECT_DIR
+Environment="PATH=$PROJECT_DIR/venv/bin"
+ExecStart=$PROJECT_DIR/venv/bin/gunicorn --workers 4 --bind 0.0.0.0:8000 bangla_chat_pro.wsgi:application
+Restart=always
 
-# Start frontend
-cd $PROJECT_DIR
-pm2 start --name bangla-chat-frontend "npm start"
+[Install]
+WantedBy=multi-user.target
+EOF
 
-# Save PM2 configuration
-pm2 save
+# Reload systemd and start service
+systemctl daemon-reload
+systemctl enable bangla-chat-pro
+systemctl start bangla-chat-pro
 
 # 7. Restart services
 print_status "Restarting services..."
