@@ -1,14 +1,46 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.db.models import Count, Avg, Sum, Q
-from django.db.models.functions import TruncDate
-from django.utils import timezone
-from datetime import timedelta
-from .models import Analytics, SystemSetting, LogEntry, Notification
-from accounts.models import Organization, User
-from chat.models import Conversation, Message, AIAgent, Feedback
-from voice.models import VoiceRecording, VoiceSession
+from django.http import HttpResponse
+
+def landing_page(request):
+    """Landing page - public view"""
+    return HttpResponse("""
+    <html>
+    <head>
+        <title>BanglaChatPro - AI-Powered Chat Platform</title>
+        <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+            .container { max-width: 800px; margin: 0 auto; }
+            h1 { color: #667eea; }
+            .button { display: inline-block; padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 10px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Welcome to BanglaChatPro</h1>
+            <p>Your AI-powered customer service platform is now running on Django!</p>
+            <p>This is a basic landing page. The full application is being set up.</p>
+            <a href="/accounts/login/" class="button">Login to Dashboard</a>
+            <a href="/admin/" class="button">Admin Panel</a>
+        </div>
+    </body>
+    </html>
+    """)
+
+# Import other modules after the landing_page function to avoid circular imports
+try:
+    from django.shortcuts import render, redirect, get_object_or_404
+    from django.contrib.auth.decorators import login_required
+    from django.contrib import messages
+    from django.db.models import Count, Avg, Sum, Q
+    from django.db.models.functions import TruncDate
+    from django.utils import timezone
+    from datetime import timedelta
+    from .models import Analytics, SystemSetting, LogEntry, Notification
+    from accounts.models import Organization, User
+    from chat.models import Conversation, Message, AIAgent, Feedback
+    from voice.models import VoiceRecording, VoiceSession
+except ImportError:
+    # Handle case where Django models can't be imported yet
+    pass
 
 @login_required
 def dashboard_home(request):

@@ -1,215 +1,57 @@
-{% extends "dashboard/base.html" %}
+{% extends "base.html" %}
 {% load static %}
 
-{% block page_title %}Dashboard Overview{% endblock %}
+{% block title %}Dashboard - BanglaChatPro{% endblock %}
 
-{% block page_content %}
-<!-- Breadcrumb -->
-<nav aria-label="breadcrumb" class="mb-4">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
-  </ol>
-</nav>
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-3 col-lg-2 d-md-block bg-dark sidebar">
+            <div class="position-sticky pt-3">
+                <h5 class="text-white px-3 mb-3">BanglaChatPro</h5>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active text-white" href="#">
+                            <i class="fas fa-home me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white-50" href="#">
+                            <i class="fas fa-comments me-2"></i>Conversations
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white-50" href="#">
+                            <i class="fas fa-users me-2"></i>Agent Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white-50" href="#">
+                            <i class="fas fa-cog me-2"></i>System Settings
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
 
-<!-- Analytics Cards -->
-<div class="row mb-4">
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card card-modern h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <h6 class="text-muted mb-1">Total Conversations</h6>
-                        <h4 class="mb-0 fw-bold text-primary">{{ analytics.total_conversations|default:0 }}</h4>
-                    </div>
-                    <div class="bg-primary bg-opacity-10 rounded-circle p-3">
-                        <i class="fas fa-comments text-primary fa-lg"></i>
-                    </div>
-                </div>
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Dashboard</h1>
             </div>
-        </div>
-    </div>
 
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card card-modern h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <h6 class="text-muted mb-1">Active Conversations</h6>
-                        <h4 class="mb-0 fw-bold text-success">{{ analytics.active_conversations|default:0 }}</h4>
-                    </div>
-                    <div class="bg-success bg-opacity-10 rounded-circle p-3">
-                        <i class="fas fa-circle text-success fa-lg"></i>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Welcome to BanglaChatPro</h5>
+                            <p class="card-text">Your AI-powered customer service platform is ready to go!</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card card-modern h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <h6 class="text-muted mb-1">Total Messages</h6>
-                        <h4 class="mb-0 fw-bold text-info">{{ analytics.total_messages|default:0 }}</h4>
-                    </div>
-                    <div class="bg-info bg-opacity-10 rounded-circle p-3">
-                        <i class="fas fa-envelope text-info fa-lg"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card card-modern h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <h6 class="text-muted mb-1">Unique Users</h6>
-                        <h4 class="mb-0 fw-bold text-warning">{{ analytics.unique_users|default:0 }}</h4>
-                    </div>
-                    <div class="bg-warning bg-opacity-10 rounded-circle p-3">
-                        <i class="fas fa-users text-warning fa-lg"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Recent Conversations -->
-<div class="row">
-    <div class="col-lg-8 mb-4">
-        <div class="card card-modern">
-            <div class="card-header bg-white">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-comments me-2 text-primary"></i>
-                    Recent Conversations
-                </h5>
-            </div>
-            <div class="card-body">
-                {% if recent_conversations %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Status</th>
-                                <th>AI Agent</th>
-                                <th>Last Activity</th>
-                                <th>Messages</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for conversation in recent_conversations %}
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        {% if conversation.user.avatar %}
-                                        <img src="{{ conversation.user.avatar.url }}" class="rounded-circle me-2" width="32" height="32" alt="Avatar">
-                                        {% else %}
-                                        <div class="bg-primary bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
-                                            <span class="text-primary fw-bold">{{ conversation.user.first_name|first|default:conversation.user.username|first|upper }}</span>
-                                        </div>
-                                        {% endif %}
-                                        <div>
-                                            <div class="fw-semibold">{{ conversation.user.get_full_name|default:conversation.user.username }}</div>
-                                            <small class="text-muted">{{ conversation.user.email }}</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{% if conversation.status == 'active' %}success{% elif conversation.status == 'completed' %}primary{% elif conversation.status == 'transferred' %}warning{% else %}secondary{% endif %}">
-                                        {{ conversation.get_status_display }}
-                                    </span>
-                                </td>
-                                <td>
-                                    {% if conversation.ai_agent %}
-                                    <span class="badge bg-info">{{ conversation.ai_agent.name }}</span>
-                                    {% else %}
-                                    <span class="text-muted">No Agent</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ conversation.last_message_at|timesince }}</td>
-                                <td>{{ conversation.message_count }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                <div class="text-center mt-3">
-                    <a href="{% url 'dashboard:conversations' %}" class="btn btn-primary-modern">
-                        View All Conversations
-                    </a>
-                </div>
-                {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-comments fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">No conversations yet</h5>
-                    <p class="text-muted">Conversations will appear here once users start chatting.</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-4">
-        <!-- System Alerts -->
-        <div class="card card-modern mb-4">
-            <div class="card-header bg-white">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
-                    System Alerts
-                </h5>
-            </div>
-            <div class="card-body">
-                {% if system_alerts %}
-                {% for alert in system_alerts %}
-                <div class="d-flex align-items-start mb-3">
-                    <div class="bg-danger bg-opacity-10 rounded-circle p-2 me-3">
-                        <i class="fas fa-exclamation-triangle text-danger"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <div class="fw-semibold">{{ alert.category|title }}</div>
-                        <small class="text-muted">{{ alert.timestamp|timesince }}</small>
-                    </div>
-                </div>
-                {% endfor %}
-                {% else %}
-                <div class="text-center py-3">
-                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-                    <div class="text-success fw-semibold">All systems operational</div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="card card-modern">
-            <div class="card-header bg-white">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-bolt me-2 text-primary"></i>
-                    Quick Actions
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    <a href="{% url 'dashboard:agent_management' %}" class="btn btn-outline-primary">
-                        <i class="fas fa-users me-2"></i>
-                        Manage Agents
-                    </a>
-                    <a href="{% url 'dashboard:analytics' %}" class="btn btn-outline-info">
-                        <i class="fas fa-chart-bar me-2"></i>
-                        View Analytics
-                    </a>
-                    <a href="{% url 'dashboard:system_settings' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-cog me-2"></i>
-                        System Settings
-                    </a>
-                </div>
-            </div>
-        </div>
+        </main>
     </div>
 </div>
 {% endblock %}
