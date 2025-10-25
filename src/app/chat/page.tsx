@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Bot, User, ArrowLeft, MessageSquare, Mic, MicOff, Volume2, VolumeX, Settings } from "lucide-react";
+import { Send, Bot, User, ArrowLeft, MessageSquare, Mic, MicOff, Volume2, VolumeX, Settings, Star } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import VoiceChat, { speakAiResponse } from "@/components/voice/VoiceChat";
 
@@ -13,6 +13,7 @@ interface Message {
   sender_name: string | null;
   created_at: string;
   confidence_score: number | null;
+  satisfaction_rating?: number | null;
 }
 
 interface AIAgent {
@@ -74,6 +75,41 @@ function ChatPageContent() {
       loadAgent(parseInt(agentId));
     }
   }, [agentId, loadAgent]);
+
+  const submitSatisfactionRating = async (messageId: number, rating: number) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/chat/messages/${messageId}/rating`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          rating: rating,
+          feedback: "" // Optional feedback can be added later
+        })
+      });
+
+      if (response.ok) {
+        // Update the message in local state to show the rating
+        setMessages(prev => prev.map(msg =>
+          msg.id === messageId
+            ? { ...msg, satisfaction_rating: rating }
+            : msg
+        ));
+
+        // Show success message briefly
+        alert(`Thank you for rating! (${rating}/5 stars)`);
+      } else {
+        const error = await response.json();
+        alert(`Failed to submit rating: ${error.detail}`);
+      }
+    } catch (error) {
+      console.error("Error submitting rating:", error);
+      alert("Failed to submit rating. Please try again.");
+    }
+  };
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -270,6 +306,40 @@ function ChatPageContent() {
                     </div>
                   )}
                 </div>
+
+                {/* Satisfaction Rating for AI Messages */}
+                {message.sender_type === "ai_agent" && !message.satisfaction_rating && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-xs text-gray-500">Rate this response:</span>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => submitSatisfactionRating(message.id, star)}
+                        className="text-gray-300 hover:text-yellow-400 transition-colors"
+                        title={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                      >
+                        <Star className="w-4 h-4 fill-current" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Display existing rating */}
+                {message.sender_type === "ai_agent" && message.satisfaction_rating && (
+                  <div className="mt-2 flex items-center gap-1">
+                    <span className="text-xs text-gray-500">Rating:</span>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`w-3 h-3 ${
+                          star <= message.satisfaction_rating!
+                            ? 'text-yellow-400 fill-current'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
 
                 {message.sender_type === "user" && (
                   <User className="w-8 h-8 text-gray-600 flex-shrink-0" />

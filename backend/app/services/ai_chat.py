@@ -112,20 +112,35 @@ class AIChatService:
             return "I'm sorry, I encountered an error processing your message. Please try again."
 
     def _detect_language(self, text: str) -> str:
-        """Detect if text is primarily in Bangla or English"""
-        # Count Bangla characters vs English characters
+        """Detect if text is primarily in Bangla, Hindi, or English"""
+        # Count characters for different languages
         bangla_chars = 0
+        hindi_chars = 0
         english_chars = 0
 
         for char in text:
             # Check for Bangla Unicode ranges
             if '\u0980' <= char <= '\u09FF':
                 bangla_chars += 1
+            # Check for Hindi/Devanagari Unicode ranges
+            elif '\u0900' <= char <= '\u097F':
+                hindi_chars += 1
+            # Check for English ASCII letters
             elif char.isascii() and char.isalpha():
                 english_chars += 1
 
-        # If more Bangla characters, return 'bangla', else 'english'
-        return 'bangla' if bangla_chars > english_chars else 'english'
+        # Determine primary language
+        max_chars = max(bangla_chars, hindi_chars, english_chars)
+
+        if max_chars == 0:
+            return 'english'  # Default fallback
+
+        if bangla_chars == max_chars:
+            return 'bangla'
+        elif hindi_chars == max_chars:
+            return 'hindi'
+        else:
+            return 'english'
 
     def _generate_response(self, user_message: str, context: str, agent: AIAgent) -> str:
         """Generate AI response using OpenAI with context"""
@@ -156,6 +171,23 @@ Guidelines:
 - Keep responses concise but informative
 - Ask clarifying questions when needed, in Bangla
 - Maintain a friendly and professional tone in Bangla"""
+                elif user_language == 'hindi':
+                    system_prompt = f"""You are {agent.name}, a helpful AI assistant for {agent.organization.name}.
+
+{agent_prompt}
+
+CRITICAL LANGUAGE REQUIREMENT: You MUST respond exclusively in Hindi (Devanagari) language. All your responses must be in proper Hindi script. Do not switch to English unless the user explicitly requests it.
+
+Since no specific training documents have been uploaded yet, you should provide general helpful assistance and guide users on how to get the most out of this AI assistant.
+
+Guidelines:
+- Be helpful, professional, and friendly
+- ALWAYS respond in Hindi language (हिंदी)
+- Provide general assistance and answer common questions
+- Mention that more specific help will be available once training documents are uploaded
+- Keep responses concise but informative
+- Ask clarifying questions when needed, in Hindi
+- Maintain a friendly and professional tone in Hindi"""
                 else:
                     system_prompt = f"""You are {agent.name}, a helpful AI assistant for {agent.organization.name}.
 
@@ -193,6 +225,24 @@ Guidelines:
 - Keep responses concise but informative
 - Ask clarifying questions when needed, in Bangla
 - Maintain a friendly and professional tone in Bangla"""
+                elif user_language == 'hindi':
+                    system_prompt = f"""You are {agent.name}, an AI assistant for {agent.organization.name}.
+
+{agent_prompt}
+
+CRITICAL LANGUAGE REQUIREMENT: You MUST respond exclusively in Hindi (Devanagari) language. All your responses must be in proper Hindi script. Do not switch to English unless the user explicitly requests it.
+
+Use the following context from the organization's training documents to provide accurate, helpful responses:
+{context}
+
+Guidelines:
+- Be helpful, professional, and accurate
+- ALWAYS respond in Hindi language (हिंदी)
+- Use the provided context to answer questions
+- If you don't have relevant information in the context, say so politely in Hindi
+- Keep responses concise but informative
+- Ask clarifying questions when needed, in Hindi
+- Maintain a friendly and professional tone in Hindi"""
                 else:
                     system_prompt = f"""You are {agent.name}, an AI assistant for {agent.organization.name}.
 

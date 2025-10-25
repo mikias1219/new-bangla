@@ -180,6 +180,11 @@ class Conversation(Base):
     # Usage tracking
     total_messages = Column(Integer, default=0)
 
+    # Admin review flags
+    needs_admin_review = Column(Boolean, default=False)
+    admin_review_reason = Column(String)
+    admin_review_priority = Column(String, default="medium")  # low, medium, high
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

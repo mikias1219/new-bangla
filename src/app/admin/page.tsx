@@ -1,751 +1,235 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
 import {
   Users,
-  CreditCard,
-  MessageSquare,
-  TrendingUp,
-  Shield,
-  UserCheck,
-  UserX,
-  Crown,
-  LogOut,
   Building,
   Bot,
-  Settings,
+  MessageSquare,
   BarChart3,
-  Play,
-  Phone,
-  Mic,
-  MicOff,
-  Volume2,
-  Plus,
-  Trash2,
+  Activity,
   CheckCircle,
-  Languages,
-  Send
+  AlertTriangle,
+  Plus,
+  LogOut,
+  Shield,
+  TrendingUp
 } from "lucide-react";
-import VoiceChat, { speakAiResponse } from "@/components/voice/VoiceChat";
 
-interface AdminStats {
-  users: {
-    total_users: number;
-    active_users: number;
-    new_users_today: number;
-    new_users_this_week: number;
-    new_users_this_month: number;
-  };
-  subscriptions: {
-    total_subscriptions: number;
-    active_subscriptions: number;
-    trial_subscriptions: number;
-    expired_subscriptions: number;
-    revenue_this_month: number;
-  };
-  ivr: {
-    total_calls: number;
-    completed_calls: number;
-    escalated_calls: number;
-    completion_rate: number;
-    escalation_rate: number;
-    average_duration: number;
-  };
-  system: {
-    total_conversations: number;
-    total_messages: number;
-    average_session_duration: number;
-    user_satisfaction_rate: number;
-  };
-  ai_agents: {
-    total_agents: number;
-    active_agents: number;
-    total_conversations: number;
-    average_confidence: number;
-    escalated_conversations: number;
-    platform_breakdown: { [key: string]: number };
-  };
-  organizations: {
-    total_organizations: number;
-    active_organizations: number;
-    total_chat_limit: number;
-    used_chats: number;
-  };
-}
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-interface User {
+interface Client {
   id: number;
+  name: string;
   email: string;
-  username: string;
-  full_name: string | null;
-  is_active: boolean;
-  is_superuser: boolean;
+  plan: string;
+  status: 'active' | 'inactive' | 'suspended';
   created_at: string;
-  subscription_plan: string | null;
-  subscription_status: string | null;
+  ai_agents_count: number;
+  total_messages: number;
+  subscription_end?: string;
 }
 
-interface IVRCall {
+interface AIAgent {
   id: number;
-  call_sid: string;
-  from_number: string;
-  to_number: string;
-  status: string;
-  current_menu: string;
-  call_duration: number | null;
-  ai_interactions: number;
-  language_used: string;
-  user_intent: string | null;
-  call_quality_score: number | null;
-  user_satisfaction: number | null;
+  name: string;
+  client_id: number;
+  client_name: string;
+  status: 'active' | 'inactive';
+  whatsapp_enabled: boolean;
+  facebook_enabled: boolean;
+  instagram_enabled: boolean;
+  total_conversations: number;
+}
+
+interface Payment {
+  id: number;
+  client_id: number;
+  client_name: string;
+  amount: number;
+  status: 'paid' | 'pending' | 'failed';
+  type: 'subscription' | 'one-time';
   created_at: string;
-  call_start_time: string | null;
-  call_end_time: string | null;
 }
 
-interface IVRCallAnalytics {
-  total_calls: number;
-  completed_calls: number;
-  escalated_calls: number;
-  completion_rate: number;
-  escalation_rate: number;
-  average_duration: number;
-}
-
-export default function AdminDashboard() {
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [clients, setClients] = useState<Client[]>([]);
   const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Test AI Agent states
-  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
-  const [testMessages, setTestMessages] = useState<Array<{type: 'user' | 'ai', content: string, timestamp: Date}>>([]);
-  const [testInput, setTestInput] = useState("");
+  const [testMessage, setTestMessage] = useState("");
+  const [selectedAgent, setSelectedAgent] = useState<number | null>(null);
+  const [testResponse, setTestResponse] = useState<string>("");
   const [isTesting, setIsTesting] = useState(false);
-  const [isVoiceTesting, setIsVoiceTesting] = useState(false);
-
-  // Test IVR states
-  const [ivrTestLogs, setIvrTestLogs] = useState<Array<{type: 'system' | 'user' | 'ivr' | 'ai', content: string, timestamp: Date}>>([]);
-  const [ivrTestInput, setIvrTestInput] = useState("");
-  const [isIvrTesting, setIsIvrTesting] = useState(false);
-  const [ivrTestStatus, setIvrTestStatus] = useState<string>("");
-  const [ivrCurrentMenu, setIvrCurrentMenu] = useState<string>("main");
-
-  // AI Agent Management states
-  const [showCreateAgentModal, setShowCreateAgentModal] = useState(false);
-  const [selectedOrgForAgent, setSelectedOrgForAgent] = useState<number | null>(null);
-  const [newAgentData, setNewAgentData] = useState({
-    name: "",
-    description: "",
-    systemPrompt: ""
-  });
-
-  // IVR Management states
-  const [ivrCalls, setIvrCalls] = useState<IVRCall[]>([]);
-  const [ivrAnalytics, setIvrAnalytics] = useState<IVRCallAnalytics | null>(null);
-  const [ivrLoading, setIvrLoading] = useState(false);
-
-
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const router = useRouter();
 
-  const checkAdminAccess = useCallback(async () => {
-    try {
-      // Safely check localStorage
-      let token;
-      try {
-        token = localStorage.getItem("token");
-      } catch (storageError) {
-        console.warn("localStorage access failed:", storageError);
-        router.push("/login");
-        return;
-      }
+  useEffect(() => {
+    loadAdminData();
+  }, []);
 
+  const loadAdminData = async () => {
+    try {
+      const token = localStorage.getItem("token");
       if (!token) {
         router.push("/login");
         return;
       }
 
-      // Check if user is admin by fetching their profile
-      let response;
-      try {
-        response = await fetch("/api/users/me", {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
-        });
-      } catch (fetchError) {
-        console.error("API call failed:", fetchError);
-        router.push("/login");
-        return;
+      // Load clients
+      const clientsResponse = await fetch("/api/admin/clients", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (clientsResponse.ok) {
+        const clientsData = await clientsResponse.json();
+        setClients(clientsData);
       }
 
-      if (!response.ok) {
-        console.error("API response not ok:", response.status);
-        router.push("/login");
-        return;
+      // Load AI agents
+      const agentsResponse = await fetch("/api/admin/ai-agents", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (agentsResponse.ok) {
+        const agentsData = await agentsResponse.json();
+        setAiAgents(agentsData);
       }
 
-      let userData;
-      try {
-        userData = await response.json();
-      } catch (parseError) {
-        console.error("Failed to parse user data:", parseError);
-        router.push("/login");
-        return;
+      // Load payments
+      const paymentsResponse = await fetch("/api/admin/payments", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (paymentsResponse.ok) {
+        const paymentsData = await paymentsResponse.json();
+        setPayments(paymentsData);
       }
-
-      // Check if user is superuser (admin)
-      if (!userData.is_superuser) {
-        alert("Access denied. Admin privileges required.");
-        router.push("/dashboard");
-        return;
-      }
-
-      // Load admin data with error handling
-      try {
-        await Promise.allSettled([
-          loadAdminStats(),
-          loadUsers(),
-          loadOrganizations(),
-          loadAiAgents()
-        ]);
-      } catch (dataError) {
-        console.error("Failed to load admin data:", dataError);
-        // Don't redirect, just show error state
-      }
-
     } catch (error) {
-      console.error("Admin access check failed:", error);
-      router.push("/login");
+      console.error("Failed to load admin data:", error);
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  };
 
-  // Test AI Agent Functions
-  const sendTestMessage = async (message: string) => {
-    if (!message.trim()) return;
-
-    setIsTesting(true);
-    const userMessage = { type: 'user' as const, content: message, timestamp: new Date() };
-    setTestMessages(prev => [...prev, userMessage]);
-
+  const handleClientStatusChange = async (clientId: number, newStatus: 'active' | 'inactive' | 'suspended') => {
     try {
       const token = localStorage.getItem("token");
-
-      // Use different endpoint based on whether an agent is selected
-      let endpoint = "";
-      let requestBody: any = { message: message.trim() };
-
-      if (selectedAgentId) {
-        // Test with specific agent
-        endpoint = `/api/chat/agents/${selectedAgentId}/chat`;
-      } else {
-        // General OpenAI testing without specific agent
-        endpoint = `/api/admin/test-openai?message=${encodeURIComponent(message.trim())}`;
-        requestBody = {};
-      }
-
-      const response = await fetch(endpoint, {
-        method: "POST",
+      const response = await fetch(`/api/admin/clients/${clientId}`, {
+        method: 'PUT',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
         },
-        ...(Object.keys(requestBody).length > 0 && { body: JSON.stringify(requestBody) }),
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        // Update local state
+        setClients(prev => prev.map(client =>
+          client.id === clientId ? { ...client, status: newStatus } : client
+        ));
+
+        // Refresh data to get updated AI agent statuses
+        await loadAdminData();
+      }
+    } catch (error) {
+      console.error("Failed to update client status:", error);
+    }
+  };
+
+  const handleAgentStatusChange = async (agentId: number, newStatus: 'active' | 'inactive') => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/admin/ai-agents/${agentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ is_active: newStatus === 'active' })
+      });
+
+      if (response.ok) {
+        // Update local state
+        setAiAgents(prev => prev.map(agent =>
+          agent.id === agentId ? { ...agent, status: newStatus } : agent
+        ));
+      }
+    } catch (error) {
+      console.error("Failed to update agent status:", error);
+    }
+  };
+
+  const testAI = async () => {
+    if (!testMessage.trim()) return;
+
+    setIsTesting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/admin/test-ai", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          message: testMessage,
+          ai_agent_id: selectedAgent
+        })
       });
 
       if (response.ok) {
         const data = await response.json();
-        const aiResponse = selectedAgentId ? data.response : data.response;
-        const aiMessage = { type: 'ai' as const, content: aiResponse, timestamp: new Date() };
-        setTestMessages(prev => [...prev, aiMessage]);
-
-        // Speak the AI response
-        if (aiResponse) {
-          speakAiResponse(aiResponse);
-        }
+        setTestResponse(`AI Response: ${data.response}\nConfidence: ${(data.confidence * 100).toFixed(1)}%`);
       } else {
-        const error = await response.json();
-        const errorMessage = { type: 'ai' as const, content: `Error: ${error.detail || 'Failed to get AI response'}`, timestamp: new Date() };
-        setTestMessages(prev => [...prev, errorMessage]);
+        setTestResponse("Error: Failed to test AI agent");
       }
     } catch (error) {
-      console.error("Test message error:", error);
-      const errorMessage = { type: 'ai' as const, content: "Error: Failed to send message", timestamp: new Date() };
-      setTestMessages(prev => [...prev, errorMessage]);
+      console.error("Failed to test AI:", error);
+      setTestResponse("Error: Network connection failed");
     } finally {
       setIsTesting(false);
     }
   };
 
-  const handleVoiceMessage = (voiceMessage: string) => {
-    if (voiceMessage.trim()) {
-      sendTestMessage(voiceMessage);
-    }
-  };
-
-  const clearTestChat = () => {
-    setTestMessages([]);
-    setTestInput("");
-  };
-
-  // IVR Testing Functions
-  const simulateIvrInput = async (input: string) => {
-    setIsIvrTesting(true);
-    setIvrTestStatus("Processing...");
-
-    try {
-      // Log user input
-      const userLog = {
-        type: 'user' as const,
-        content: `User input: "${input}"`,
-        timestamp: new Date()
-      };
-      setIvrTestLogs(prev => [...prev, userLog]);
-
-      // Simulate IVR processing based on current menu
-      let aiResponse = "";
-      let newMenu = ivrCurrentMenu;
-
-      if (ivrCurrentMenu === "main") {
-        // Main menu logic
-        const lowerInput = input.toLowerCase();
-        if (lowerInput.includes("অর্ডার") || lowerInput.includes("order") || input === "1") {
-          aiResponse = "অর্ডার স্ট্যাটাস দেখার জন্য আপনার অর্ডার আইডি বলুন।\n\nPlease say your order ID to check order status.";
-          newMenu = "order";
-        } else if (lowerInput.includes("প্রোডাক্ট") || lowerInput.includes("product") || input === "2") {
-          aiResponse = "প্রোডাক্ট খোঁজার জন্য প্রোডাক্টের নাম বলুন।\n\nPlease say the product name you are looking for.";
-          newMenu = "product";
-        } else if (lowerInput.includes("সাপোর্ট") || lowerInput.includes("support") || input === "3") {
-          aiResponse = "আপনার সমস্যা বর্ণনা করুন।\n\nPlease describe your issue.";
-          newMenu = "support";
-        } else if (lowerInput.includes("মানুষ") || lowerInput.includes("human") || input === "4") {
-          aiResponse = "আপনাকে এখন একজন মানুষের সাথে সংযোগিত করছি। অনুগ্রহ করে অপেক্ষা করুন।\n\nConnecting you with a human agent. Please wait.";
-          newMenu = "escalated";
-        } else {
-          aiResponse = "দুঃখিত, বুঝতে পারলাম না। অনুগ্রহ করে আবার বলুন।\n\nSorry, I didn't understand. Please try again.";
-        }
-      } else if (ivrCurrentMenu === "order") {
-        // Order processing logic
-        aiResponse = `অর্ডার ${input} খুঁজে পাওয়া গেছে। আপনার অর্ডার "প্রসেসিং" অবস্থায় আছে এবং আগামী ২-৩ দিনের মধ্যে ডেলিভারি হবে।\n\nOrder ${input} found. Your order is in "Processing" status and will be delivered in 2-3 days.`;
-        newMenu = "main";
-      } else if (ivrCurrentMenu === "product") {
-        // Product search logic
-        aiResponse = `"${input}" প্রোডাক্ট খুঁজে পাওয়া গেছে। এটি বর্তমানে স্টকে আছে এবং দাম ১২৫০ টাকা।\n\nProduct "${input}" found. It is currently in stock and costs 1250 taka.`;
-        newMenu = "main";
-      } else if (ivrCurrentMenu === "support") {
-        // Support ticket logic
-        aiResponse = "আপনার সাপোর্ট টিকেট তৈরি করা হয়েছে। টিকেট নম্বর: SUP-2024-001। আমাদের টিম আপনার সাথে ২৪ ঘণ্টার মধ্যে যোগাযোগ করবে।\n\nYour support ticket has been created. Ticket number: SUP-2024-001. Our team will contact you within 24 hours.";
-        newMenu = "main";
-      }
-
-      // Update menu
-      setIvrCurrentMenu(newMenu);
-
-      // Log AI/IVR response
-      const aiLog = {
-        type: 'ivr' as const,
-        content: `IVR Response: ${aiResponse}`,
-        timestamp: new Date()
-      };
-      setIvrTestLogs(prev => [...prev, aiLog]);
-
-      // Log menu change
-      if (newMenu !== ivrCurrentMenu) {
-        const menuLog = {
-          type: 'system' as const,
-          content: `Menu changed to: ${newMenu}`,
-          timestamp: new Date()
-        };
-        setIvrTestLogs(prev => [...prev, menuLog]);
-      }
-
-      setIvrTestStatus("Response generated");
-
-    } catch (error) {
-      console.error("IVR test error:", error);
-      const errorLog = {
-        type: 'system' as const,
-        content: `Error: ${error}`,
-        timestamp: new Date()
-      };
-      setIvrTestLogs(prev => [...prev, errorLog]);
-      setIvrTestStatus("Error occurred");
-    } finally {
-      setIsIvrTesting(false);
-    }
-  };
-
-  const sendIvrTestInput = async () => {
-    if (!ivrTestInput.trim() || isIvrTesting) return;
-
-    const input = ivrTestInput.trim();
-    setIvrTestInput("");
-    await simulateIvrInput(input);
-  };
-
-  const clearIvrTest = () => {
-    setIvrTestLogs([]);
-    setIvrTestInput("");
-    setIvrTestStatus("");
-    setIvrCurrentMenu("main");
-  };
-
-  const simulateDtmfInput = async (digit: string) => {
-    await simulateIvrInput(digit);
-  };
-
-  // AI Agent Management Functions
-  const createAIAgentForOrg = async () => {
-    if (!selectedOrgForAgent || !newAgentData.name.trim()) return;
-
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Authentication token not found. Please log in again.");
-        router.push("/login");
-        return;
-      }
-
-      const response = await fetch(`/api/admin/organizations/${selectedOrgForAgent}/ai-agents`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: newAgentData.name.trim(),
-          ...(newAgentData.description.trim() && { description: newAgentData.description.trim() }),
-          ...(newAgentData.systemPrompt.trim() && { system_prompt: newAgentData.systemPrompt.trim() })
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        alert(`AI Agent created successfully for ${data.organization_name}!`);
-        setShowCreateAgentModal(false);
-        setNewAgentData({ name: "", description: "", systemPrompt: "" });
-        setSelectedOrgForAgent(null);
-        await loadAiAgents(); // Refresh the list
-      } else if (response.status === 401) {
-        alert("Authentication expired. Please log in again.");
-        localStorage.removeItem("token");
-        router.push("/login");
-      } else {
-        try {
-          const error = await response.json();
-          alert(`Failed to create AI agent: ${error.detail}`);
-        } catch {
-          alert("Failed to create AI agent");
-        }
-      }
-    } catch (error) {
-      console.error("Create agent error:", error);
-      alert("Failed to create AI agent. Please check your connection.");
-    }
-  };
-
-  const toggleAgentStatus = async (agentId: number, isActive: boolean) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Authentication token not found. Please log in again.");
-        router.push("/login");
-        return;
-      }
-
-      const response = await fetch(`/api/admin/ai-agents/${agentId}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({ is_active: !isActive }),
-      });
-
-      if (response.ok) {
-        alert(`AI Agent ${!isActive ? 'activated' : 'deactivated'} successfully!`);
-        await loadAiAgents(); // Refresh the list
-      } else if (response.status === 401) {
-        alert("Authentication expired. Please log in again.");
-        localStorage.removeItem("token");
-        router.push("/login");
-      } else {
-        try {
-          const error = await response.json();
-          alert(`Failed to update agent status: ${error.detail}`);
-        } catch {
-          alert("Failed to update agent status");
-        }
-      }
-    } catch (error) {
-      console.error("Toggle agent status error:", error);
-      alert("Failed to update agent status. Please check your connection.");
-    }
-  };
-
-  useEffect(() => {
-    checkAdminAccess();
-  }, [checkAdminAccess]);
-
-  const loadAdminStats = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch("/api/admin/stats", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
-    } catch (error) {
-      console.error("Failed to load admin stats:", error);
-    }
-  };
-
-  const loadUsers = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch("/api/admin/users", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
-      }
-    } catch (error) {
-      console.error("Failed to load users:", error);
-    }
-  };
-
-  const loadOrganizations = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch("/api/admin/organizations", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setOrganizations(data);
-      }
-    } catch (error) {
-      console.error("Failed to load organizations:", error);
-    }
-  };
-
-  const loadAiAgents = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch("/api/admin/ai-agents", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAiAgents(data);
-      }
-    } catch (error) {
-      console.error("Failed to load AI agents:", error);
-    }
-  };
-
-  const loadIVRCalls = async (organizationId: number = 1) => {
-    setIvrLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.warn("No authentication token available for IVR calls");
-        setIvrCalls([]);
-        return;
-      }
-
-      const response = await fetch(`/ivr/calls/${organizationId}`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setIvrCalls(data.calls || []);
-      } else if (response.status === 404) {
-        console.info("IVR calls endpoint not implemented yet, using empty data");
-        setIvrCalls([]);
-      } else {
-        console.warn("Failed to load IVR calls:", response.status);
-        setIvrCalls([]);
-      }
-    } catch (error) {
-      console.warn("IVR calls endpoint not available, using empty data:", error);
-      setIvrCalls([]);
-    } finally {
-      setIvrLoading(false);
-    }
-  };
-
-  const loadIVRAnalytics = async (organizationId: number = 1) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.warn("No authentication token available for IVR analytics");
-        setIvrAnalytics({});
-        return;
-      }
-
-      const response = await fetch(`/ivr/analytics/${organizationId}`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setIvrAnalytics(data);
-      } else if (response.status === 404) {
-        console.info("IVR analytics endpoint not implemented yet, using empty data");
-        setIvrAnalytics({});
-      } else {
-        console.warn("Failed to load IVR analytics:", response.status);
-        setIvrAnalytics({});
-      }
-    } catch (error) {
-      console.warn("IVR analytics endpoint not available, using empty data:", error);
-      setIvrAnalytics({});
-    }
-  };
-
-
-  const toggleUserStatus = async (userId: number, isActive: boolean) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Authentication token not found. Please log in again.");
-        router.push("/login");
-        return;
-      }
-
-      const response = await fetch(`/api/admin/users/${userId}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({ is_active: isActive }),
-      });
-
-      if (response.ok) {
-        await loadUsers(); // Refresh user list
-        alert(`User ${isActive ? 'activated' : 'deactivated'} successfully`);
-      } else if (response.status === 401) {
-        alert("Authentication expired. Please log in again.");
-        localStorage.removeItem("token");
-        router.push("/login");
-      } else {
-        alert("Failed to update user status");
-      }
-    } catch (error) {
-      console.error("Failed to toggle user status:", error);
-      alert("Failed to update user status. Please check your connection.");
-    }
-  };
-
-  const toggleAdminStatus = async (userId: number, isSuperuser: boolean) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Authentication token not found. Please log in again.");
-        router.push("/login");
-        return;
-      }
-
-      const response = await fetch(`/api/admin/users/${userId}/admin`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({ is_superuser: isSuperuser }),
-      });
-
-      if (response.ok) {
-        await loadUsers(); // Refresh user list
-        alert(`Admin privileges ${isSuperuser ? 'granted' : 'revoked'} successfully`);
-      } else if (response.status === 401) {
-        alert("Authentication expired. Please log in again.");
-        localStorage.removeItem("token");
-        router.push("/login");
-      } else {
-        alert("Failed to update admin status");
-      }
-    } catch (error) {
-      console.error("Failed to toggle admin status:", error);
-      alert("Failed to update admin status. Please check your connection.");
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    router.push("/");
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading admin dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white/80 backdrop-blur-xl shadow-lg border-b border-white/20 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">
-              {/* Mobile sidebar toggle */}
-              <button
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="lg:hidden p-2 text-gray-600 hover:text-gray-900"
-              >
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  {isSidebarOpen ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  )}
-                </svg>
-              </button>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+              <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl flex items-center justify-center">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Platform Admin</h1>
+                <p className="text-xs text-gray-500">Manage all clients & AI agents</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-4">
-              <span className="hidden sm:inline text-gray-700">Administrator</span>
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:flex items-center gap-2 bg-green-50 px-3 py-1 rounded-full">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-green-700 font-medium">All Systems Operational</span>
+              </div>
+              <span className="text-sm text-gray-600 bg-red-50 px-3 py-1 rounded-lg">
+                Admin Access
+              </span>
               <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm sm:text-base"
+                onClick={() => router.push("/")}
+                className="bg-white/80 backdrop-blur-sm text-gray-700 px-4 py-2 rounded-lg hover:bg-white/90 transition-colors border border-gray-200"
               >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Logout</span>
+                <LogOut className="w-4 h-4 inline mr-2" />
+                Logout
               </button>
             </div>
           </div>
@@ -753,1305 +237,895 @@ export default function AdminDashboard() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Overview Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-white/20">
+            <div className="flex items-center justify-between mb-4">
+              <Users className="w-8 h-8 text-blue-500" />
+              <TrendingUp className="w-5 h-5 text-green-500" />
+            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">156</div>
+            <div className="text-sm text-gray-600">Total Users</div>
+          </div>
+
+          <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-white/20">
+            <div className="flex items-center justify-between mb-4">
+              <Building className="w-8 h-8 text-green-500" />
+              <Activity className="w-5 h-5 text-green-500" />
+            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">23</div>
+            <div className="text-sm text-gray-600">Organizations</div>
+          </div>
+
+          <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-white/20">
+            <div className="flex items-center justify-between mb-4">
+              <Bot className="w-8 h-8 text-purple-500" />
+              <CheckCircle className="w-5 h-5 text-green-500" />
+            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">89</div>
+            <div className="text-sm text-gray-600">AI Agents</div>
+          </div>
+
+          <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-white/20">
+            <div className="flex items-center justify-between mb-4">
+              <MessageSquare className="w-8 h-8 text-orange-500" />
+              <Activity className="w-5 h-5 text-orange-500" />
+            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">45.2K</div>
+            <div className="text-sm text-gray-600">Total Messages</div>
+          </div>
+        </div>
+
+        {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar */}
-          <div className={`lg:col-span-1 ${isSidebarOpen ? 'block' : 'hidden lg:block'}`}>
-            <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <div className="lg:col-span-1">
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-white/20">
               <nav className="space-y-2">
                 <button
-                  onClick={() => setActiveTab("dashboard")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                    activeTab === "dashboard"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-300 ${
+                    activeTab === 'dashboard'
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                      : 'text-gray-700 hover:bg-gray-50 rounded-xl'
                   }`}
                 >
-                  <TrendingUp className="w-5 h-5" />
+                  <BarChart3 className="w-5 h-5" />
                   Dashboard
                 </button>
                 <button
-                  onClick={() => setActiveTab("users")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                    activeTab === "users"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <Users className="w-5 h-5" />
-                  User Management
-                </button>
-                <button
-                  onClick={() => setActiveTab("subscriptions")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                    activeTab === "subscriptions"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <CreditCard className="w-5 h-5" />
-                  Subscriptions
-                </button>
-                <button
-                  onClick={() => setActiveTab("organizations")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                    activeTab === "organizations"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
+                  onClick={() => setActiveTab('clients')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-300 ${
+                    activeTab === 'clients'
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                      : 'text-gray-700 hover:bg-gray-50 rounded-xl'
                   }`}
                 >
                   <Building className="w-5 h-5" />
-                  Organizations
+                  Clients
                 </button>
                 <button
-                  onClick={() => setActiveTab("ai-agents")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                    activeTab === "ai-agents"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
+                  onClick={() => setActiveTab('agents')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-300 ${
+                    activeTab === 'agents'
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                      : 'text-gray-700 hover:bg-gray-50 rounded-xl'
                   }`}
                 >
                   <Bot className="w-5 h-5" />
                   AI Agents
                 </button>
                 <button
-                  onClick={() => setActiveTab("test-ai")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                    activeTab === "test-ai"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
+                  onClick={() => setActiveTab('payments')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-300 ${
+                    activeTab === 'payments'
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                      : 'text-gray-700 hover:bg-gray-50 rounded-xl'
                   }`}
                 >
-                  <Play className="w-5 h-5" />
-                  Test AI Agents
+                  <TrendingUp className="w-5 h-5" />
+                  Payments
                 </button>
-                <button
-                  onClick={() => setActiveTab("test-ivr")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                    activeTab === "test-ivr"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <Phone className="w-5 h-5" />
-                  Test IVR Calls
-                </button>
-                <button
-                  onClick={() => setActiveTab("analytics")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                    activeTab === "analytics"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <BarChart3 className="w-5 h-5" />
-                  Analytics
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("ivr");
-                    loadIVRCalls();
-                    loadIVRAnalytics();
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                    activeTab === "ivr"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <Phone className="w-5 h-5" />
-                  IVR Calls
-                </button>
-                <button
-                  onClick={() => setActiveTab("system")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                    activeTab === "system"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <Settings className="w-5 h-5" />
-                  System Settings
-                </button>
-              </nav>
+              <button
+                onClick={() => setActiveTab('testing')}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-300 ${
+                  activeTab === 'testing'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                    : 'text-gray-700 hover:bg-gray-50 rounded-xl'
+                }`}
+              >
+                <MessageSquare className="w-5 h-5" />
+                Test AI
+              </button>
+              <button
+                onClick={() => setActiveTab('profile')}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-300 ${
+                  activeTab === 'profile'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                    : 'text-gray-700 hover:bg-gray-50 rounded-xl'
+                }`}
+              >
+                <Shield className="w-5 h-5" />
+                Profile
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-300 ${
+                  activeTab === 'settings'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                    : 'text-gray-700 hover:bg-gray-50 rounded-xl'
+                }`}
+              >
+                <Settings className="w-5 h-5" />
+                Settings
+              </button>
+            </nav>
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-3" onClick={() => isSidebarOpen && setIsSidebarOpen(false)}>
-            {activeTab === "dashboard" && <DashboardOverview stats={stats} />}
-            {activeTab === "users" && (
-              <UserManagement
-                users={users}
-                onToggleStatus={toggleUserStatus}
-                onToggleAdmin={toggleAdminStatus}
-              />
-            )}
-            {activeTab === "organizations" && (
-              <OrganizationManagement organizations={organizations} />
-            )}
-            {activeTab === "ai-agents" && (
-              <AIAgentManagement
-                aiAgents={aiAgents}
-                organizations={organizations}
-                onCreateAgent={() => setShowCreateAgentModal(true)}
-                onToggleStatus={toggleAgentStatus}
-                onTestAgent={(agentId) => {
-                  setSelectedAgentId(agentId);
-                  setActiveTab("test-ai");
-                }}
-              />
-            )}
-            {activeTab === "test-ai" && (
-              <TestAIAgents
-                aiAgents={aiAgents}
-                selectedAgentId={selectedAgentId}
-                setSelectedAgentId={setSelectedAgentId}
-                testMessages={testMessages}
-                testInput={testInput}
-                setTestInput={setTestInput}
-                isTesting={isTesting}
-                isVoiceTesting={isVoiceTesting}
-                sendTestMessage={sendTestMessage}
-                handleVoiceMessage={handleVoiceMessage}
-                clearTestChat={clearTestChat}
-              />
-            )}
-            {activeTab === "test-ivr" && (
-              <TestIVRCalls
-                ivrTestLogs={ivrTestLogs}
-                ivrTestInput={ivrTestInput}
-                setIvrTestInput={setIvrTestInput}
-                isIvrTesting={isIvrTesting}
-                ivrTestStatus={ivrTestStatus}
-                ivrCurrentMenu={ivrCurrentMenu}
-                sendIvrTestInput={sendIvrTestInput}
-                simulateIvrInput={simulateIvrInput}
-                simulateDtmfInput={simulateDtmfInput}
-                clearIvrTest={clearIvrTest}
-              />
-            )}
-            {activeTab === "analytics" && <AnalyticsDashboard stats={stats} />}
-            {activeTab === "ivr" && <IVRManagement calls={ivrCalls} analytics={ivrAnalytics} loading={ivrLoading} />}
-            {activeTab === "subscriptions" && <SubscriptionManagement />}
-            {activeTab === "system" && <SystemManagement />}
-          </div>
-        </div>
-      </div>
+          {/* Content Area */}
+          <div className="lg:col-span-3">
+            {activeTab === 'dashboard' && (
+              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-8 border border-white/20">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Platform Overview</h2>
 
-      {/* Create AI Agent Modal */}
-      {showCreateAgentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Create AI Agent</h3>
-                <button
-                  onClick={() => setShowCreateAgentModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Organization
-                  </label>
-                  <select
-                    value={selectedOrgForAgent || ""}
-                    onChange={(e) => setSelectedOrgForAgent(e.target.value ? parseInt(e.target.value) : null)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Choose an organization...</option>
-                    {organizations.map((org) => (
-                      <option key={org.id} value={org.id}>
-                        {org.name} ({org.domain})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Agent Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newAgentData.name}
-                    onChange={(e) => setNewAgentData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="e.g., Customer Support Assistant"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={newAgentData.description}
-                    onChange={(e) => setNewAgentData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Describe what this AI agent will help with..."
-                    rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    System Prompt (Optional)
-                  </label>
-                  <textarea
-                    value={newAgentData.systemPrompt}
-                    onChange={(e) => setNewAgentData(prev => ({ ...prev, systemPrompt: e.target.value }))}
-                    placeholder="Custom system prompt for the AI agent..."
-                    rows={4}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    If left empty, a default prompt will be generated based on the organization.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => setShowCreateAgentModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={createAIAgentForOrg}
-                  disabled={!selectedOrgForAgent || !newAgentData.name.trim()}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Create Agent
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DashboardOverview({ stats }: { stats: AdminStats | null }) {
-  if (!stats) {
-    return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <p className="text-gray-600">Loading dashboard data...</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* User Stats */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">User Statistics</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <Users className="w-8 h-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-blue-600">Total Users</p>
-                <p className="text-2xl font-bold text-blue-900">{stats.users.total_users}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-green-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <UserCheck className="w-8 h-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-green-600">Active Users</p>
-                <p className="text-2xl font-bold text-green-900">{stats.users.active_users}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <TrendingUp className="w-8 h-8 text-purple-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-purple-600">New Today</p>
-                <p className="text-2xl font-bold text-purple-900">{stats.users.new_users_today}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Subscription Stats */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Subscription Statistics</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-indigo-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <CreditCard className="w-8 h-8 text-indigo-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-indigo-600">Active Subscriptions</p>
-                <p className="text-2xl font-bold text-indigo-900">{stats.subscriptions.active_subscriptions}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-yellow-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <Shield className="w-8 h-8 text-yellow-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-yellow-600">Trial Users</p>
-                <p className="text-2xl font-bold text-yellow-900">{stats.subscriptions.trial_subscriptions}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-red-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <Crown className="w-8 h-8 text-red-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-red-600">Revenue (This Month)</p>
-                <p className="text-2xl font-bold text-red-900">${stats.subscriptions.revenue_this_month}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function UserManagement({
-  users,
-  onToggleStatus,
-  onToggleAdmin
-}: {
-  users: User[];
-  onToggleStatus: (userId: number, isActive: boolean) => void;
-  onToggleAdmin: (userId: number, isSuperuser: boolean) => void;
-}) {
-  return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="p-6 border-b border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900">User Management</h2>
-        <p className="text-gray-600">Manage user accounts and permissions</p>
-      </div>
-      <div className="p-6">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Plan
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((user) => (
-                <tr key={user.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {user.full_name || user.username}
-                        </div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
+                {/* Recent Activity */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <Plus className="w-5 h-5 text-green-600" />
                       </div>
-                      {user.is_superuser && (
-                        <Crown className="w-4 h-4 text-yellow-500 ml-2" />
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">New organization registered</p>
+                        <p className="text-sm text-gray-600">TechCorp Solutions joined the platform</p>
+                      </div>
+                      <span className="text-sm text-gray-500">2 hours ago</span>
+                    </div>
+
+                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Bot className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">AI Agent created</p>
+                        <p className="text-sm text-gray-600">Customer Support Agent trained for E-commerce</p>
+                      </div>
+                      <span className="text-sm text-gray-500">4 hours ago</span>
+                    </div>
+
+                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                        <MessageSquare className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">High message volume</p>
+                        <p className="text-sm text-gray-600">FashionStore processed 500+ messages today</p>
+                      </div>
+                      <span className="text-sm text-gray-500">6 hours ago</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* System Health */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">System Health</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-green-900">API Services</span>
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      </div>
+                      <p className="text-sm text-green-700">All services operational</p>
+                    </div>
+
+                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-green-900">Database</span>
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      </div>
+                      <p className="text-sm text-green-700">99.9% uptime this month</p>
+                    </div>
+
+                    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-yellow-900">Background Jobs</span>
+                        <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                      </div>
+                      <p className="text-sm text-yellow-700">2 jobs queued</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button
+                      onClick={() => setActiveTab('clients')}
+                      className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300"
+                    >
+                      <Users className="w-5 h-5" />
+                      Manage Clients
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('agents')}
+                      className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-300"
+                    >
+                      <Bot className="w-5 h-5" />
+                      Manage AI Agents
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'clients' && (
+              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-8 border border-white/20">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Client Management</h2>
+                  <button className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-colors">
+                    Add New Client
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Client</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Plan</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Status</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">AI Agents</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Messages</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clients.map((client) => (
+                        <tr key={client.id} className="border-b border-gray-100">
+                          <td className="py-4 px-4">
+                            <div>
+                              <div className="font-medium text-gray-900">{client.name}</div>
+                              <div className="text-sm text-gray-600">{client.email}</div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                              {client.plan}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <select
+                              value={client.status}
+                              onChange={(e) => handleClientStatusChange(client.id, e.target.value as 'active' | 'inactive' | 'suspended')}
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                client.status === 'active' ? 'bg-green-100 text-green-800' :
+                                client.status === 'inactive' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                              }`}
+                            >
+                              <option value="active">Active</option>
+                              <option value="inactive">Inactive</option>
+                              <option value="suspended">Suspended</option>
+                            </select>
+                          </td>
+                          <td className="py-4 px-4">{client.ai_agents_count}</td>
+                          <td className="py-4 px-4">{client.total_messages.toLocaleString()}</td>
+                          <td className="py-4 px-4">
+                            <button className="text-blue-600 hover:text-blue-800 text-sm mr-3">
+                              Edit
+                            </button>
+                            <button className="text-red-600 hover:text-red-800 text-sm">
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'agents' && (
+              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-8 border border-white/20">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">AI Agent Management</h2>
+                  <button className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-emerald-600 transition-colors">
+                    Create New Agent
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {aiAgents.map((agent) => (
+                    <div key={agent.id} className="border border-gray-200 rounded-lg p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{agent.name}</h3>
+                          <p className="text-sm text-gray-600">Client: {agent.client_name}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <select
+                            value={agent.status}
+                            onChange={(e) => handleAgentStatusChange(agent.id, e.target.value as 'active' | 'inactive')}
+                            className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              agent.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                          </select>
+                          <button className="text-blue-600 hover:text-blue-800 text-sm">
+                            Configure
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-gray-900">{agent.total_conversations}</div>
+                          <div className="text-sm text-gray-600">Conversations</div>
+                        </div>
+                        <div className="flex justify-center">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                            agent.whatsapp_enabled ? 'bg-green-500' : 'bg-gray-300'
+                          }`}>
+                            <span className="text-xs text-white">📱</span>
+                          </div>
+                          <span className="ml-2 text-sm text-gray-600">WhatsApp</span>
+                        </div>
+                        <div className="flex justify-center">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                            agent.facebook_enabled ? 'bg-blue-500' : 'bg-gray-300'
+                          }`}>
+                            <span className="text-xs text-white">📘</span>
+                          </div>
+                          <span className="ml-2 text-sm text-gray-600">Facebook</span>
+                        </div>
+                        <div className="flex justify-center">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                            agent.instagram_enabled ? 'bg-pink-500' : 'bg-gray-300'
+                          }`}>
+                            <span className="text-xs text-white">📷</span>
+                          </div>
+                          <span className="ml-2 text-sm text-gray-600">Instagram</span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button className="text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded hover:bg-blue-100">
+                          View Conversations
+                        </button>
+                        <button className="text-sm bg-green-50 text-green-700 px-3 py-1 rounded hover:bg-green-100">
+                          Edit Settings
+                        </button>
+                        <button className="text-sm bg-red-50 text-red-700 px-3 py-1 rounded hover:bg-red-100">
+                          Delete Agent
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'payments' && (
+              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-8 border border-white/20">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Payment Management</h2>
+                  <button className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors">
+                    Process Payment
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl">
+                    <div className="text-2xl font-bold text-green-600 mb-2">$12,450</div>
+                    <div className="text-sm text-green-700">Monthly Revenue</div>
+                  </div>
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-6 rounded-xl">
+                    <div className="text-2xl font-bold text-blue-600 mb-2">23</div>
+                    <div className="text-sm text-blue-700">Active Subscriptions</div>
+                  </div>
+                  <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-xl">
+                    <div className="text-2xl font-bold text-orange-600 mb-2">3</div>
+                    <div className="text-sm text-orange-700">Failed Payments</div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Client</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Amount</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Type</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Status</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Date</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map((payment) => (
+                        <tr key={payment.id} className="border-b border-gray-100">
+                          <td className="py-4 px-4">
+                            <div className="font-medium text-gray-900">{payment.client_name}</div>
+                          </td>
+                          <td className="py-4 px-4 font-semibold">${payment.amount}</td>
+                          <td className="py-4 px-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              payment.type === 'subscription' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                            }`}>
+                              {payment.type}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              payment.status === 'paid' ? 'bg-green-100 text-green-800' :
+                              payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {payment.status}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-sm text-gray-600">
+                            {new Date(payment.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="py-4 px-4">
+                            <button className="text-blue-600 hover:text-blue-800 text-sm mr-3">
+                              View
+                            </button>
+                            {payment.status === 'failed' && (
+                              <button className="text-green-600 hover:text-green-800 text-sm">
+                                Retry
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'testing' && (
+              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-8 border border-white/20">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">AI Agent Testing</h2>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Chat Test Interface */}
+                  <div className="border border-gray-200 rounded-lg p-6">
+                    <h3 className="font-semibold text-gray-900 mb-4">Test Chat Agent</h3>
+
+                    <div className="mb-4">
+                      <select
+                        value={selectedAgent || ""}
+                        onChange={(e) => setSelectedAgent(e.target.value ? parseInt(e.target.value) : null)}
+                        className="w-full p-2 border border-gray-300 rounded-lg"
+                      >
+                        <option value="">Select AI Agent (or leave empty for default)</option>
+                        {aiAgents.map((agent) => (
+                          <option key={agent.id} value={agent.id}>
+                            {agent.name} ({agent.client_name})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4 h-64 overflow-y-auto font-mono text-sm">
+                      {testResponse ? (
+                        <div className="whitespace-pre-wrap text-gray-800">{testResponse}</div>
+                      ) : (
+                        <div className="text-center text-gray-500">
+                          Test responses will appear here
+                        </div>
                       )}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      user.is_active
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.subscription_plan || 'None'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <button
-                      onClick={() => onToggleStatus(user.id, !user.is_active)}
-                      className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-medium ${
-                        user.is_active
-                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                          : 'bg-green-100 text-green-700 hover:bg-green-200'
-                      }`}
-                    >
-                      {user.is_active ? <UserX className="w-4 h-4 mr-1" /> : <UserCheck className="w-4 h-4 mr-1" />}
-                      {user.is_active ? 'Deactivate' : 'Activate'}
-                    </button>
-                    {!user.is_superuser && (
+
+                    <div className="flex gap-2 mb-4">
+                      <input
+                        type="text"
+                        value={testMessage}
+                        onChange={(e) => setTestMessage(e.target.value)}
+                        placeholder="Type your test message..."
+                        className="flex-1 p-2 border border-gray-300 rounded-lg"
+                        onKeyPress={(e) => e.key === 'Enter' && testAI()}
+                      />
                       <button
-                        onClick={() => onToggleAdmin(user.id, true)}
-                        className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                        onClick={testAI}
+                        disabled={isTesting || !testMessage.trim()}
+                        className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
                       >
-                        <Shield className="w-4 h-4 mr-1" />
-                        Make Admin
+                        {isTesting ? 'Testing...' : 'Test'}
                       </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SubscriptionManagement() {
-  return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">Subscription Management</h2>
-      <p className="text-gray-600">Manage subscription plans and billing</p>
-      <div className="mt-6">
-        <p className="text-gray-500">Subscription management features will be available soon.</p>
-      </div>
-    </div>
-  );
-}
-
-function OrganizationManagement({ organizations }: { organizations: Organization[] }) {
-  return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="p-6 border-b border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900">Organization Management</h2>
-        <p className="text-gray-600">Manage client organizations and their AI agents</p>
-      </div>
-      <div className="p-6">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Organization
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Plan
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  AI Agents
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Usage
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {organizations.map((org) => (
-                <tr key={org.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {org.name}
-                      </div>
-                      <div className="text-sm text-gray-500">{org.domain}</div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                      {org.plan}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {org.max_ai_agents}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {org.current_monthly_chats}/{org.max_monthly_chats}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      org.status === 'active'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {org.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function AIAgentManagement({
-  aiAgents,
-  organizations,
-  onCreateAgent,
-  onToggleStatus,
-  onTestAgent
-}: {
-  aiAgents: AIAgent[];
-  organizations: Organization[];
-  onCreateAgent: () => void;
-  onToggleStatus: (agentId: number, isActive: boolean) => void;
-  onTestAgent: (agentId: number) => void;
-}) {
-  return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">AI Agent Management</h2>
-            <p className="text-gray-600">Monitor and manage all AI agents across organizations</p>
-          </div>
-          <button
-            onClick={onCreateAgent}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            Create Agent
-          </button>
-        </div>
-      </div>
-      <div className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {aiAgents.map((agent) => (
-            <div key={agent.id} className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-medium text-gray-900">{agent.name}</h3>
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                  agent.is_active
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {agent.is_active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setTestResponse("")}
+                        className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        onClick={() => setTestMessage("")}
+                        className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600"
+                      >
+                        Clear Input
+                      </button>
+                    </div>
+                  </div>
 
-              <p className="text-sm text-gray-600 mb-3">{agent.description}</p>
+                  {/* Voice Test Interface */}
+                  <div className="border border-gray-200 rounded-lg p-6">
+                    <h3 className="font-semibold text-gray-900 mb-4">Voice Call Simulation</h3>
 
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Conversations:</span>
-                  <span className="font-medium">{agent.total_conversations}</span>
+                    <div className="mb-4">
+                      <select className="w-full p-2 border border-gray-300 rounded-lg">
+                        <option>Select AI Agent for IVR</option>
+                        {aiAgents.map((agent) => (
+                          <option key={agent.id} value={agent.id}>
+                            {agent.name} ({agent.client_name})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4 h-48 overflow-y-auto">
+                      <div className="text-center text-gray-500 text-sm">
+                        IVR simulation will show call flow and responses here
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <p className="text-sm text-gray-600 mb-2">Quick Test Scenarios:</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button className="bg-blue-100 text-blue-800 px-3 py-2 rounded text-sm hover:bg-blue-200">
+                          Order Status
+                        </button>
+                        <button className="bg-green-100 text-green-800 px-3 py-2 rounded text-sm hover:bg-green-200">
+                          Product Info
+                        </button>
+                        <button className="bg-purple-100 text-purple-800 px-3 py-2 rounded text-sm hover:bg-purple-200">
+                          Support Request
+                        </button>
+                        <button className="bg-orange-100 text-orange-800 px-3 py-2 rounded text-sm hover:bg-orange-200">
+                          Speak to Human
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="text-center">
+                      <button className="w-full bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600">
+                        Start IVR Test
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Messages:</span>
-                  <span className="font-medium">{agent.total_messages}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Training Status:</span>
-                  <span className="font-medium">{agent.training_status}</span>
+
+                {/* Test Instructions */}
+                <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <h3 className="font-semibold text-blue-900 mb-3">Testing Instructions</h3>
+                  <ul className="text-blue-800 text-sm space-y-2">
+                    <li>• Select an AI agent from the dropdown or leave empty to test the default agent</li>
+                    <li>• Enter a test message and click "Test" to see how the AI responds</li>
+                    <li>• Voice testing simulates IVR calls with common customer scenarios</li>
+                    <li>• All tests run in sandbox mode and don't affect live customer conversations</li>
+                  </ul>
                 </div>
               </div>
+            )}
 
-              <div className="mt-3 flex flex-wrap gap-1">
-                {agent.whatsapp_enabled && (
-                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">
-                    WhatsApp
-                  </span>
-                )}
-                {agent.facebook_enabled && (
-                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded bg-blue-100 text-blue-800">
-                    Facebook
-                  </span>
-                )}
-                {agent.instagram_enabled && (
-                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded bg-pink-100 text-pink-800">
-                    Instagram
-                  </span>
-                )}
-              </div>
+            {activeTab === 'profile' && (
+              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-8 border border-white/20">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Admin Profile & Account</h2>
 
-              <div className="mt-4 flex gap-2">
-                <button
-                  onClick={() => onTestAgent(agent.id)}
-                  className="flex-1 flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700"
-                >
-                  <Play className="w-3 h-3" />
-                  Test
-                </button>
-                <button
-                  onClick={() => onToggleStatus(agent.id, agent.is_active)}
-                  className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded text-sm ${
-                    agent.is_active
-                      ? 'bg-red-600 text-white hover:bg-red-700'
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  }`}
-                >
-                  {agent.is_active ? 'Deactivate' : 'Activate'}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Personal Information */}
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-6 rounded-xl">
+                    <h3 className="font-bold text-gray-900 mb-6 flex items-center">
+                      <Shield className="w-5 h-5 mr-2" />
+                      Personal Information
+                    </h3>
 
-function IVRManagement({ calls, analytics, loading }: { calls: any[], analytics: any, loading: boolean }) {
-  return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">IVR Call Management</h3>
-      <div className="text-center text-gray-500 py-8">
-        <p>IVR management functionality coming soon...</p>
-      </div>
-    </div>
-  );
-}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Full Name
+                        </label>
+                        <div className="bg-white px-3 py-2 rounded-lg border border-gray-200">
+                          Platform Administrator
+                        </div>
+                      </div>
 
-function SystemManagement() {
-  return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">System Management</h3>
-      <div className="text-center text-gray-500 py-8">
-        <p>System management functionality coming soon...</p>
-      </div>
-    </div>
-  );
-}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Username
+                        </label>
+                        <div className="bg-white px-3 py-2 rounded-lg border border-gray-200">
+                          admin
+                        </div>
+                      </div>
 
-function AnalyticsDashboard({ stats }: { stats: AdminStats | null }) {
-  if (!stats) {
-    return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <p className="text-gray-600">Loading analytics data...</p>
-      </div>
-    );
-  }
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Email Address
+                        </label>
+                        <div className="bg-white px-3 py-2 rounded-lg border border-gray-200">
+                          admin@bdchatpro.com
+                        </div>
+                      </div>
 
-  return (
-    <div className="space-y-6">
-      {/* AI Agent Analytics */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">AI Agent Performance</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <Bot className="w-8 h-8 text-purple-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-purple-600">Total Agents</p>
-                <p className="text-2xl font-bold text-purple-900">{stats?.ai_agents?.total_agents || 0}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-green-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <MessageSquare className="w-8 h-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-green-600">Conversations</p>
-                <p className="text-2xl font-bold text-green-900">{stats.ai_agents.total_conversations}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <TrendingUp className="w-8 h-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-blue-600">Avg Confidence</p>
-                <p className="text-2xl font-bold text-blue-900">{stats.ai_agents.average_confidence}%</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-red-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <Shield className="w-8 h-8 text-red-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-red-600">Escalated</p>
-                <p className="text-2xl font-bold text-red-900">{stats.ai_agents.escalated_conversations}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Account Type
+                        </label>
+                        <div className="bg-white px-3 py-2 rounded-lg border border-gray-200 capitalize">
+                          Platform Administrator
+                        </div>
+                      </div>
 
-      {/* Platform Usage Breakdown */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Platform Usage</h2>
-        <div className="space-y-3">
-          {Object.entries(stats.ai_agents.platform_breakdown).map(([platform, count]) => (
-            <div key={platform} className="flex items-center justify-between">
-              <span className="text-gray-700 capitalize">{platform}</span>
-              <div className="flex items-center gap-2">
-                <div className="w-32 bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full"
-                    style={{
-                      width: `${(count / Object.values(stats.ai_agents.platform_breakdown).reduce((a, b) => a + b, 0)) * 100}%`
-                    }}
-                  ></div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Access Level
+                        </label>
+                        <div className="bg-green-100 text-green-800 px-3 py-2 rounded-lg border border-green-200 font-medium">
+                          Super User
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* System Statistics */}
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl">
+                    <h3 className="font-bold text-gray-900 mb-6 flex items-center">
+                      <Activity className="w-5 h-5 mr-2" />
+                      System Overview
+                    </h3>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Total Organizations
+                        </label>
+                        <div className="bg-white px-3 py-2 rounded-lg border border-gray-200">
+                          4 Active Organizations
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Total AI Agents
+                        </label>
+                        <div className="bg-white px-3 py-2 rounded-lg border border-gray-200">
+                          3 Deployed Agents
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          System Status
+                        </label>
+                        <div className="bg-green-100 text-green-800 px-3 py-2 rounded-lg border border-green-200 font-medium">
+                          All Systems Operational
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Platform Uptime
+                        </label>
+                        <div className="bg-white px-3 py-2 rounded-lg border border-gray-200">
+                          99.9% (30 days)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <span className="text-sm font-medium text-gray-900 w-12 text-right">{count}</span>
+
+                {/* Admin Permissions */}
+                <div className="mt-8 bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl">
+                  <h3 className="font-bold text-gray-900 mb-6 flex items-center">
+                    <Star className="w-5 h-5 mr-2" />
+                    Administrator Permissions
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                      <div className="flex items-center mb-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                        <span className="text-sm font-medium text-gray-900">Client Management</span>
+                      </div>
+                      <div className="text-xs text-gray-600">Create, modify, and manage client accounts</div>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                      <div className="flex items-center mb-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                        <span className="text-sm font-medium text-gray-900">AI Agent Control</span>
+                      </div>
+                      <div className="text-xs text-gray-600">Deploy and manage AI agents across platforms</div>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                      <div className="flex items-center mb-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                        <span className="text-sm font-medium text-gray-900">System Monitoring</span>
+                      </div>
+                      <div className="text-xs text-gray-600">Monitor platform health and performance</div>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                      <div className="flex items-center mb-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                        <span className="text-sm font-medium text-gray-900">Billing Management</span>
+                      </div>
+                      <div className="text-xs text-gray-600">Handle subscriptions and payment processing</div>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                      <div className="flex items-center mb-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                        <span className="text-sm font-medium text-gray-900">Security Oversight</span>
+                      </div>
+                      <div className="text-xs text-gray-600">Manage platform security and access controls</div>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                      <div className="flex items-center mb-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                        <span className="text-sm font-medium text-gray-900">Support Access</span>
+                      </div>
+                      <div className="text-xs text-gray-600">Full access to support and troubleshooting tools</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+            )}
 
-function TestAIAgents({
-  aiAgents,
-  selectedAgentId,
-  setSelectedAgentId,
-  testMessages,
-  testInput,
-  setTestInput,
-  isTesting,
-  isVoiceTesting,
-  sendTestMessage,
-  handleVoiceMessage,
-  clearTestChat
-}: {
-  aiAgents: AIAgent[];
-  selectedAgentId: number | null;
-  setSelectedAgentId: (id: number | null) => void;
-  testMessages: Array<{type: 'user' | 'ai', content: string, timestamp: Date}>;
-  testInput: string;
-  setTestInput: (input: string) => void;
-  isTesting: boolean;
-  isVoiceTesting: boolean;
-  sendTestMessage: (message: string) => void;
-  handleVoiceMessage: (message: string) => void;
-  clearTestChat: () => void;
-}) {
-  const selectedAgent = aiAgents.find(agent => agent.id === selectedAgentId);
+            {activeTab === 'settings' && (
+              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl p-8 border border-white/20">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Admin Settings</h2>
 
-  // Voice recording state
-  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
-  const [recordedVoiceText, setRecordedVoiceText] = useState("");
+                <div className="space-y-8">
+                  {/* Platform Settings */}
+                  <div className="bg-white rounded-xl shadow-lg p-6">
+                    <h3 className="font-bold text-gray-900 mb-6 flex items-center">
+                      <Settings className="w-5 h-5 mr-2" />
+                      Platform Configuration
+                    </h3>
 
-  const handleVoiceMessageForTest = (voiceMessage: string) => {
-    if (isRecordingVoice) {
-      // Voice recording mode - set as recorded text, don't send automatically
-      setRecordedVoiceText(voiceMessage);
-      // Don't auto-stop here, let user control when to stop
-    } else {
-      // Voice input mode - send immediately
-      sendTestMessage(voiceMessage);
-    }
-  };
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Default AI Model
+                        </label>
+                        <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          <option>GPT-4 Turbo</option>
+                          <option>GPT-4</option>
+                          <option>GPT-3.5 Turbo</option>
+                        </select>
+                      </div>
 
-  const startVoiceRecording = () => {
-    setIsRecordingVoice(true);
-  };
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Maximum Monthly Messages per Client
+                        </label>
+                        <input
+                          type="number"
+                          defaultValue="10000"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
 
-  const sendRecordedVoice = () => {
-    if (recordedVoiceText.trim()) {
-      sendTestMessage(recordedVoiceText);
-      setRecordedVoiceText("");
-    }
-  };
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-gray-900">Maintenance Mode</div>
+                          <div className="text-sm text-gray-600">Temporarily disable platform access for maintenance</div>
+                        </div>
+                        <input type="checkbox" className="w-4 h-4 text-blue-600" />
+                      </div>
+                    </div>
+                  </div>
 
-  return (
-    <div className="bg-white rounded-lg shadow">
-      {/* Header with Actions */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {/* Agent Selection - Compact */}
-            <select
-              value={selectedAgentId || ""}
-              onChange={(e) => setSelectedAgentId(e.target.value ? parseInt(e.target.value) : null)}
-              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-            >
-              <option value="">General AI Test</option>
-              {aiAgents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
-                </option>
-              ))}
-            </select>
-            {/* Agent Status */}
-            {selectedAgent && (
-              <div className="flex items-center gap-2">
-                <Bot className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-gray-900">{selectedAgent.name}</span>
-                <span className={`px-2 py-0.5 text-xs rounded-full ${
-                  selectedAgent.training_status === "trained"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-yellow-100 text-yellow-800"
-                }`}>
-                  {selectedAgent.training_status}
-                </span>
+                  {/* Security Settings */}
+                  <div className="bg-white rounded-xl shadow-lg p-6">
+                    <h3 className="font-bold text-gray-900 mb-6 flex items-center">
+                      <Shield className="w-5 h-5 mr-2" />
+                      Security Settings
+                    </h3>
+
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Change Admin Password
+                        </label>
+                        <div className="space-y-3">
+                          <input
+                            type="password"
+                            placeholder="Current password"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <input
+                            type="password"
+                            placeholder="New password"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <input
+                            type="password"
+                            placeholder="Confirm new password"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <button className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                            Update Password
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-gray-200 pt-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-gray-900">Two-Factor Authentication</div>
+                            <div className="text-sm text-gray-600">Enable 2FA for admin account</div>
+                          </div>
+                          <button className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                            Enable 2FA
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* System Maintenance */}
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+                    <h3 className="font-bold text-yellow-900 mb-6 flex items-center">
+                      <AlertTriangle className="w-5 h-5 mr-2" />
+                      System Maintenance
+                    </h3>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-yellow-900">Database Backup</div>
+                          <div className="text-sm text-yellow-700">Create a backup of all platform data</div>
+                        </div>
+                        <button className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors">
+                          Backup Now
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-yellow-900">Clear System Logs</div>
+                          <div className="text-sm text-yellow-700">Remove old system logs to free up space</div>
+                        </div>
+                        <button className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors">
+                          Clear Logs
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-yellow-900">Restart Services</div>
+                          <div className="text-sm text-yellow-700">Restart all platform services</div>
+                        </div>
+                        <button className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors">
+                          Restart
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={clearTestChat}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-              title="Clear chat"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex">
-        {/* Chat Area */}
-        <div className="flex-1 p-4">
-          <div className="bg-gray-50 rounded-lg h-[500px] flex flex-col">
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {testMessages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <Bot className="w-16 h-16 text-gray-300 mb-4" />
-                  <p className="text-gray-500 text-sm">Start a conversation</p>
-                  <p className="text-gray-400 text-xs mt-1">Type or use voice in any language</p>
-                </div>
-              ) : (
-                testMessages.map((message, index) => (
-                  <div
-                    key={index}
-                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[320px] px-4 py-3 rounded-2xl shadow-sm ${
-                        message.type === 'user'
-                          ? 'bg-blue-600 text-white rounded-br-sm'
-                          : 'bg-white text-gray-900 rounded-bl-sm border border-gray-100'
-                      }`}
-                    >
-                      <p className="text-sm leading-relaxed">{message.content}</p>
-                      <p className={`text-xs mt-1 ${message.type === 'user' ? 'text-blue-100' : 'text-gray-400'}`}>
-                        {message.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-              {isTesting && (
-                <div className="flex justify-start">
-                  <div className="bg-white border border-gray-100 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                      <span className="text-sm text-gray-600">AI is thinking...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Input Area */}
-            <div className="p-4 border-t border-gray-200 bg-white rounded-b-lg">
-              {/* Voice Recording Controls */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-4">
-                  {/* Voice Recording Controls */}
-                  {isRecordingVoice ? (
-                    <button
-                      onClick={() => setIsRecordingVoice(false)}
-                      className="p-2 rounded-lg bg-red-100 text-red-600 border border-red-300 animate-pulse"
-                      title="Stop recording"
-                    >
-                      <MicOff className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={startVoiceRecording}
-                      disabled={isTesting || isVoiceTesting}
-                      className="p-2 rounded-lg bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Start voice recording"
-                    >
-                      <Mic className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="text-xs text-gray-500">
-                  Recording: {isRecordingVoice ? 'Recording...' : recordedVoiceText ? 'Ready to Send' : 'None'}
-                </div>
-              </div>
-
-              {/* Recorded Voice Preview */}
-              {recordedVoiceText && (
-                <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-blue-900">Recorded Voice:</span>
-                    <button
-                      onClick={sendRecordedVoice}
-                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                    >
-                      Send Recording
-                    </button>
-                  </div>
-                  <p className="text-sm text-blue-800">{recordedVoiceText}</p>
-                </div>
-              )}
-
-              <div className="flex items-center gap-3">
-                {/* Voice Input Button */}
-                <VoiceChat
-                  onVoiceMessage={handleVoiceMessageForTest}
-                  isLoading={isVoiceTesting}
-                />
-
-                {/* Text Input */}
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    value={testInput}
-                    onChange={(e) => setTestInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendTestMessage(testInput)}
-                    placeholder="Type your message... (supports English, Bangla, etc.)"
-                    className="w-full px-4 py-3 pr-20 bg-white border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 shadow-sm"
-                    disabled={isTesting}
-                  />
-                  {/* Voice Recording Icon in Input */}
-                  <button
-                    onClick={startVoiceRecording}
-                    disabled={isTesting || isVoiceTesting}
-                    className={`absolute right-12 top-1/2 transform -translate-y-1/2 p-1.5 rounded-full transition-colors ${
-                      isRecordingVoice
-                        ? 'bg-red-100 text-red-600 animate-pulse'
-                        : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    title="Record voice message"
-                  >
-                    <Mic className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => sendTestMessage(testInput)}
-                    disabled={!testInput.trim() || isTesting}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Status Panel */}
-        <div className="w-64 border-l border-gray-200 p-4 bg-gray-50">
-          <div className="space-y-4">
-            {/* Status Indicators */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-700">OpenAI</span>
-                </div>
-                <CheckCircle className="w-4 h-4 text-green-600" />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm text-gray-700">Voice</span>
-                </div>
-                <Mic className="w-4 h-4 text-blue-600" />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                  <span className="text-sm text-gray-700">Languages</span>
-                </div>
-                <Languages className="w-4 h-4 text-purple-600" />
-              </div>
-            </div>
-
-            {/* Language Info */}
-            <div className="bg-white rounded-lg p-3 border border-gray-200">
-              <h4 className="text-sm font-medium text-gray-900 mb-2">Multi-Language Support</h4>
-              <div className="space-y-1 text-xs text-gray-600">
-                <div>• English ↔ English</div>
-                <div>• বাংলা ↔ বাংলা</div>
-                <div>• Voice in all languages</div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
   );
 }
 
-
-// Test IVR Calls Component
-const TestIVRCalls = React.memo(function TestIVRCalls({
-  ivrTestLogs,
-  ivrTestInput,
-  setIvrTestInput,
-  isIvrTesting,
-  ivrTestStatus,
-  ivrCurrentMenu,
-  sendIvrTestInput,
-  simulateIvrInput,
-  simulateDtmfInput,
-  clearIvrTest
-}: {
-  ivrTestLogs: Array<{type: 'system' | 'user' | 'ivr' | 'ai', content: string, timestamp: Date}>;
-  ivrTestInput: string;
-  setIvrTestInput: (input: string) => void;
-  isIvrTesting: boolean;
-  ivrTestStatus: string;
-  ivrCurrentMenu: string;
-  sendIvrTestInput: () => void;
-  simulateIvrInput: (input: string) => Promise<void>;
-  simulateDtmfInput: (digit: string) => void;
-  clearIvrTest: () => void;
-}) {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [ivrTestLogs]);
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendIvrTestInput();
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Test IVR Call System</h2>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Phone className="w-4 h-4" />
-          Simulate IVR interactions and test call flows
-        </div>
-      </div>
-
-      {/* IVR Status Panel */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-gray-900">IVR Status</h3>
-          <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${isIvrTesting ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
-            <span className="text-sm text-gray-600">
-              {isIvrTesting ? 'Processing...' : 'Ready'}
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm font-medium text-gray-600">Current Menu</p>
-            <p className="text-lg font-semibold text-blue-600 capitalize">{ivrCurrentMenu}</p>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm font-medium text-gray-600">Status</p>
-            <p className="text-lg font-semibold text-gray-900">{ivrTestStatus || 'Waiting for input'}</p>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm font-medium text-gray-600">Total Interactions</p>
-            <p className="text-lg font-semibold text-purple-600">{ivrTestLogs.length}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Testing Interface */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* IVR Chat Log */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">IVR Interaction Log</h3>
-              <button
-                onClick={clearIvrTest}
-                className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-              >
-                Clear Log
-              </button>
-            </div>
-
-            <div className="h-96 overflow-y-auto p-4 space-y-3">
-              {ivrTestLogs.length === 0 ? (
-                <div className="text-center text-gray-500 py-12">
-                  <Phone className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>Start testing by entering input below</p>
-                  <p className="text-sm">Try saying "অর্ডার" or pressing "1" for order status</p>
-                </div>
-              ) : (
-                ivrTestLogs.map((log, index) => (
-                  <div
-                    key={index}
-                    className={`flex gap-3 ${
-                      log.type === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
-                  >
-                    {log.type !== 'user' && (
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
-                        log.type === 'ivr' ? 'bg-blue-500' :
-                        log.type === 'system' ? 'bg-gray-500' : 'bg-green-500'
-                      }`}>
-                        {log.type === 'ivr' ? '🎯' : log.type === 'system' ? '⚙️' : '��'}
-                      </div>
-                    )}
-
-                    <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      log.type === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : log.type === 'ivr'
-                        ? 'bg-blue-100 text-blue-900'
-                        : log.type === 'system'
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'bg-green-100 text-green-900'
-                    }`}>
-                      <p className="text-sm whitespace-pre-wrap">{log.content}</p>
-                      <p className="text-xs opacity-70 mt-1">
-                        {log.timestamp.toLocaleTimeString()}
-                      </p>
-                    </div>
-
-                    {log.type === 'user' && (
-                      <div className="w-8 h-8 rounded-full bg-gray-500 flex items-center justify-center text-white text-sm font-medium">
-                        👤
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          </div>
-        </div>
-
-        {/* Control Panel */}
-        <div className="space-y-6">
-          {/* Text Input */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Speech Input (Text Simulation)</h4>
-            <div className="space-y-3">
-              <input
-                type="text"
-                value={ivrTestInput}
-                onChange={(e) => setIvrTestInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type what you would say to IVR..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                disabled={isIvrTesting}
-              />
-              <button
-                onClick={sendIvrTestInput}
-                disabled={!ivrTestInput.trim() || isIvrTesting}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                <Send className="w-4 h-4" />
-                Send Speech Input
-              </button>
-            </div>
-          </div>
-
-          {/* DTMF Keypad */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">DTMF Keypad (Phone Keys)</h4>
-            <div className="grid grid-cols-3 gap-2">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, '*', 0, '#'].map((digit) => (
-                <button
-                  key={digit}
-                  onClick={() => simulateDtmfInput(digit.toString())}
-                  disabled={isIvrTesting}
-                  className="aspect-square bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-lg font-semibold transition-colors flex items-center justify-center"
-                >
-                  {digit}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 mt-3">
-              Press keys to simulate phone button presses
-            </p>
-          </div>
-
-          {/* Quick Commands */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Quick Test Commands</h4>
-            <div className="space-y-2">
-              {[
-                { label: 'অর্ডার স্ট্যাটাস / Order Status', command: 'অর্ডার' },
-                { label: 'প্রোডাক্ট তথ্য / Product Info', command: 'প্রোডাক্ট' },
-                { label: 'সাপোর্ট / Support', command: 'সাপোর্ট' },
-                { label: 'মানুষের সাথে কথা / Human Agent', command: 'মানুষ' },
-                { label: 'পুনরায় শুনুন / Repeat Menu', command: '0' }
-              ].map((item) => (
-                <button
-                  key={item.command}
-                  onClick={() => simulateIvrInput(item.command)}
-                  disabled={isIvrTesting}
-                  className="w-full text-left px-3 py-2 bg-gray-50 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
-                >
-                  <span className="text-sm text-gray-700">{item.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Menu Guide */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">IVR Menu Guide</h4>
-            <div className="space-y-2 text-xs text-gray-600">
-              <div>
-                <strong>Main Menu:</strong><br />
-                1: অর্ডার স্ট্যাটাস<br />
-                2: প্রোডাক্ট তথ্য<br />
-                3: সাপোর্ট<br />
-                4: মানুষের সাথে কথা
-              </div>
-              <div>
-                <strong>Current Menu:</strong><br />
-                <span className="font-medium text-blue-600 capitalize">{ivrCurrentMenu}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Status Panel */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {/* Status Indicators */}
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-gray-700">IVR System</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span className="text-sm text-gray-700">Bangla Language</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-              <span className="text-sm text-gray-700">AI Processing</span>
-            </div>
-          </div>
-
-          <div className="text-sm text-gray-500">
-            Test Mode - Simulates IVR behavior without real calls
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-});
+export default AdminDashboard;

@@ -372,7 +372,18 @@ async def rate_message_satisfaction(
 
     # Check if rating triggers admin review (rating below 3/5)
     if rating_data.rating < 3:
-        # Log for admin review (could send notification)
+        # Log for admin review and flag conversation for review
         logger.warning(f"Low satisfaction rating ({rating_data.rating}/5) for message {message.id} in conversation {message.conversation_id}")
+
+        # Flag the conversation for admin review
+        conversation = message.conversation
+        if not hasattr(conversation, 'needs_admin_review') or not conversation.needs_admin_review:
+            conversation.needs_admin_review = True
+            conversation.admin_review_reason = f"Low satisfaction rating ({rating_data.rating}/5) on message {message.id}"
+            conversation.admin_review_priority = "high" if rating_data.rating <= 2 else "medium"
+            db.commit()
+
+            # Log admin alert
+            logger.warning(f"CONVERSATION FLAGGED FOR ADMIN REVIEW: Conversation {conversation.id} - {conversation.admin_review_reason}")
 
     return {"message": "Rating submitted successfully"}
