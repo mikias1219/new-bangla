@@ -357,7 +357,7 @@ function AdminDashboard() {
                 }`}
               >
                 <Settings className="w-5 h-5" />
-                Settings
+                <span className="hidden sm:inline">Settings</span>
               </button>
             </nav>
             </div>
