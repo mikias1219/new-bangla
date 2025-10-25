@@ -204,11 +204,11 @@ function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-xl shadow-lg border-b border-white/20 sticky top-0 z-50">
+      <header className="bg-white/95 backdrop-blur-xl shadow-xl border-b border-gray-200/20 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -217,16 +217,16 @@ function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="hidden sm:flex items-center gap-2 bg-green-50 px-3 py-1 rounded-full">
+              <div className="hidden sm:flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-sm text-green-700 font-medium">All Systems Operational</span>
               </div>
-              <span className="text-sm text-gray-600 bg-red-50 px-3 py-1 rounded-lg">
+              <span className="text-sm text-gray-700 bg-gradient-to-r from-red-50 to-orange-50 px-3 py-1.5 rounded-lg border border-red-200/50">
                 Admin Access
               </span>
               <button
                 onClick={() => router.push("/")}
-                className="bg-white/80 backdrop-blur-sm text-gray-700 px-4 py-2 rounded-lg hover:bg-white/90 transition-colors border border-gray-200"
+                className="bg-white/90 backdrop-blur-sm text-gray-700 px-4 py-2 rounded-xl hover:bg-white hover:shadow-lg transition-all duration-200 font-medium border border-gray-200 hover:border-gray-300"
               >
                 <LogOut className="w-4 h-4 inline mr-2" />
                 Logout

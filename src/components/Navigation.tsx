@@ -20,8 +20,8 @@ export default function Navigation() {
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
       isScrolled
-        ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200/50'
-        : 'bg-white/90 backdrop-blur-sm border-b border-gray-100'
+        ? 'bg-white/95 backdrop-blur-xl shadow-xl border-b border-gray-200/20'
+        : 'bg-white/90 backdrop-blur-lg border-b border-gray-100/50'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
@@ -36,34 +36,38 @@ export default function Navigation() {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden md:flex items-center space-x-8">
             <Link
               href="#features"
-              className="text-gray-700 hover:text-blue-600 transition-colors font-medium text-sm"
+              className="text-gray-600 hover:text-blue-600 transition-all duration-200 font-medium text-sm hover:scale-105 relative group"
             >
               Features
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full transition-all duration-300"></span>
             </Link>
             <Link
               href="#pricing"
-              className="text-gray-700 hover:text-blue-600 transition-colors font-medium text-sm"
+              className="text-gray-600 hover:text-blue-600 transition-all duration-200 font-medium text-sm hover:scale-105 relative group"
             >
               Pricing
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full transition-all duration-300"></span>
             </Link>
             <Link
               href="#integrations"
-              className="text-gray-700 hover:text-blue-600 transition-colors font-medium text-sm"
+              className="text-gray-600 hover:text-blue-600 transition-all duration-200 font-medium text-sm hover:scale-105 relative group"
             >
               Integrations
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full transition-all duration-300"></span>
             </Link>
+            <div className="w-px h-6 bg-gray-300"></div>
             <Link
               href="/login"
-              className="text-gray-700 hover:text-blue-600 transition-colors font-medium text-sm"
+              className="text-gray-600 hover:text-blue-600 transition-all duration-200 font-medium text-sm hover:scale-105"
             >
               Sign In
             </Link>
             <Link
               href="/register"
-              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-2.5 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 font-medium text-sm shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-2.5 rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all duration-300 font-medium text-sm shadow-lg hover:shadow-xl transform hover:scale-105 hover:shadow-blue-500/25"
             >
               Start Free Trial
             </Link>
@@ -73,7 +77,7 @@ export default function Navigation() {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              className="p-2 rounded-xl text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 hover:scale-105"
               aria-label="Toggle menu"
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -91,39 +95,39 @@ export default function Navigation() {
         <div className={`md:hidden transition-all duration-300 overflow-hidden ${
           isMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
         }`}>
-          <div className="border-t border-gray-200 py-4 space-y-4">
+          <div className="border-t border-gray-200/50 py-6 space-y-2">
             <Link
               href="#features"
-              className="block text-gray-700 hover:text-blue-600 transition-colors font-medium"
+              className="block text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 font-medium py-3 px-4 rounded-lg"
               onClick={closeMenu}
             >
               Features
             </Link>
             <Link
               href="#pricing"
-              className="block text-gray-700 hover:text-blue-600 transition-colors font-medium"
+              className="block text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 font-medium py-3 px-4 rounded-lg"
               onClick={closeMenu}
             >
               Pricing
             </Link>
             <Link
               href="#integrations"
-              className="block text-gray-700 hover:text-blue-600 transition-colors font-medium"
+              className="block text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 font-medium py-3 px-4 rounded-lg"
               onClick={closeMenu}
             >
               Integrations
             </Link>
-            <div className="pt-4 border-t border-gray-200 space-y-3">
+            <div className="pt-6 border-t border-gray-200/50 space-y-4">
               <Link
                 href="/login"
-                className="block w-full text-center text-gray-700 hover:text-blue-600 transition-colors font-medium py-2"
+                className="block w-full text-center text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 font-medium py-3 px-4 rounded-lg"
                 onClick={closeMenu}
               >
                 Sign In
               </Link>
               <Link
                 href="/register"
-                className="block w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-4 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 font-medium text-center shadow-lg"
+                className="block w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-4 rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all duration-300 font-medium text-center shadow-lg hover:shadow-xl hover:shadow-blue-500/25"
                 onClick={closeMenu}
               >
                 Start Free Trial
