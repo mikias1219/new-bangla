@@ -173,7 +173,7 @@ def conversations_view(request):
 
     # Pagination would be added here in production
 
-    ai_agents = AIAgent.objects.filter(organization=organization, is_active=True)
+    ai_agents = AIAgent.objects.filter(organization=organization, status='active')
 
     context = {
         'conversations': conversations,
@@ -220,11 +220,11 @@ def agent_management(request):
         })
 
     # Get conversations for the user
-    conversations = Conversation.objects.filter(user=user).order_by('-last_message_at')
+    conversations = Conversation.objects.filter(user=request.user).order_by('-last_message_at')
 
     # Calculate average rating for user's conversations
     avg_rating = Feedback.objects.filter(
-        conversation__user=user
+        conversation__user=request.user
     ).aggregate(avg_rating=Avg('rating'))['avg_rating'] or 0
 
     context = {

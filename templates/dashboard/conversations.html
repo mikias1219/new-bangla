@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Conversations - BanglaChatPro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h2 mb-1">Conversations</h1>
+            <p class="text-muted mb-0">View and manage all customer conversations</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'dashboard:chat' %}" class="btn btn-primary">
+                <i class="fas fa-comments me-1"></i>Start New Chat
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select name="status" id="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="completed" {% if filters.status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="transferred" {% if filters.status == 'transferred' %}selected{% endif %}>Transferred</option>
+                    <option value="abandoned" {% if filters.status == 'abandoned' %}selected{% endif %}>Abandoned</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="agent" class="form-label">AI Agent</label>
+                <select name="agent" id="agent" class="form-select">
+                    <option value="">All Agents</option>
+                    {% for agent in ai_agents %}
+                    <option value="{{ agent.id }}" {% if filters.agent == agent.id|stringformat:'s' %}selected{% endif %}>{{ agent.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="date_from" class="form-label">From Date</label>
+                <input type="date" name="date_from" id="date_from" class="form-control" value="{{ filters.date_from }}">
+            </div>
+            <div class="col-md-3">
+                <label for="date_to" class="form-label">To Date</label>
+                <input type="date" name="date_to" id="date_to" class="form-control" value="{{ filters.date_to }}">
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-filter me-1"></i>Apply Filters
+                </button>
+                <a href="{% url 'dashboard:conversations' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Conversations Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">All Conversations</h5>
+        <div class="text-muted small">
+            Showing {{ conversations|length }} conversations
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if conversations %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>User</th>
+                            <th>AI Agent</th>
+                            <th>Status</th>
+                            <th>Messages</th>
+                            <th>Duration</th>
+                            <th>Last Activity</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for conversation in conversations %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; font-size: 14px;">
+                                        {{ conversation.user.username|slice:":1"|upper }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ conversation.user.get_full_name|default:conversation.user.username }}</div>
+                                        <small class="text-muted">{{ conversation.user.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if conversation.ai_agent %}
+                                    <div class="d-flex align-items-center">
+                                        {% if conversation.ai_agent.avatar %}
+                                            <img src="{{ conversation.ai_agent.avatar.url }}" alt="{{ conversation.ai_agent.name }}" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;">
+                                        {% else %}
+                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 12px;">
+                                                <i class="fas fa-robot"></i>
+                                            </div>
+                                        {% endif %}
+                                        <span>{{ conversation.ai_agent.name }}</span>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">No Agent</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if conversation.status == 'active' %}success{% elif conversation.status == 'completed' %}primary{% elif conversation.status == 'transferred' %}warning{% else %}secondary{% endif %}">
+                                    {{ conversation.status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ conversation.message_count }}</span>
+                            </td>
+                            <td>
+                                {% if conversation.duration %}
+                                    {{ conversation.duration|naturaldelta }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ conversation.last_message_at|timesince }} ago</small>
+                                <br>
+                                <small class="text-muted">{{ conversation.last_message_at|date:"M j, Y g:i A" }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewConversation({{ conversation.id }})" title="View Conversation">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    {% if conversation.status == 'active' %}
+                                    <button class="btn btn-sm btn-outline-success" onclick="continueConversation({{ conversation.id }})" title="Continue Chat">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                    {% endif %}
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#" onclick="exportConversation({{ conversation.id }})">
+                                                <i class="fas fa-download me-2"></i>Export
+                                            </a></li>
+                                            {% if conversation.status == 'active' %}
+                                            <li><a class="dropdown-item text-warning" href="#" onclick="transferConversation({{ conversation.id }})">
+                                                <i class="fas fa-user-friends me-2"></i>Transfer
+                                            </a></li>
+                                            {% endif %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteConversation({{ conversation.id }})">
+                                                <i class="fas fa-trash me-2"></i>Delete
+                                            </a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination would go here -->
+            {% if conversations|length > 25 %}
+            <div class="card-footer text-center">
+                <small class="text-muted">Pagination coming soon...</small>
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-comments fa-4x text-muted mb-4"></i>
+                <h4 class="text-muted mb-3">No Conversations Found</h4>
+                <p class="text-muted mb-4">
+                    {% if filters.status or filters.agent or filters.date_from or filters.date_to %}
+                        No conversations match your current filters.
+                    {% else %}
+                        No conversations have been started yet.
+                    {% endif %}
+                </p>
+                {% if filters.status or filters.agent or filters.date_from or filters.date_to %}
+                    <a href="{% url 'dashboard:conversations' %}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-times me-2"></i>Clear Filters
+                    </a>
+                {% endif %}
+                <a href="{% url 'dashboard:chat' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Start First Conversation
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function viewConversation(conversationId) {
+    // TODO: Implement view conversation modal/details
+    alert('View conversation functionality coming soon!');
+}
+
+function continueConversation(conversationId) {
+    // Redirect to chat with this conversation
+    window.location.href = "{% url 'dashboard:chat' %}";
+}
+
+function exportConversation(conversationId) {
+    // TODO: Implement export functionality
+    alert('Export conversation functionality coming soon!');
+}
+
+function transferConversation(conversationId) {
+    // TODO: Implement transfer to human agent
+    alert('Transfer conversation functionality coming soon!');
+}
+
+function deleteConversation(conversationId) {
+    if (confirm('Are you sure you want to delete this conversation? This action cannot be undone.')) {
+        // TODO: Implement delete functionality
+        alert('Delete conversation functionality coming soon!');
+    }
+}
+
+// Auto-submit form when filters change
+document.querySelectorAll('select').forEach(select => {
+    select.addEventListener('change', function() {
+        this.closest('form').submit();
+    });
+});
+</script>
+{% endblock %}
