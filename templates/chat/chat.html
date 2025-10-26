@@ -1,204 +1,163 @@
-{% extends "dashboard/base.html" %}
+{% extends "base.html" %}
 {% load static %}
 
 {% block title %}Chat - BanglaChatPro{% endblock %}
 
-{% block extra_head %}
-<style>
-    .chat-container {
-        height: 70vh;
-        display: flex;
-        flex-direction: column;
-    }
-    .chat-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 1rem;
-        background: #f8f9fa;
-        border-radius: 0.5rem;
-        margin-bottom: 1rem;
-    }
-    .message {
-        margin-bottom: 1rem;
-        padding: 0.75rem;
-        border-radius: 0.5rem;
-        max-width: 80%;
-    }
-    .message.user {
-        background: #007bff;
-        color: white;
-        margin-left: auto;
-        text-align: right;
-    }
-    .message.ai {
-        background: #e9ecef;
-        color: #212529;
-        margin-right: auto;
-    }
-    .chat-input {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-    }
-    .chat-input input {
-        flex: 1;
-    }
-    .voice-controls {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-        margin-top: 1rem;
-    }
-    .recording-indicator {
-        color: red;
-        animation: pulse 1s infinite;
-    }
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.5; }
-        100% { opacity: 1; }
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <!-- Sidebar -->
-        <nav class="col-md-3 col-lg-2 d-md-block bg-dark sidebar">
-            <div class="position-sticky pt-3">
-                <h5 class="text-white px-3 mb-3">BanglaChatPro</h5>
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link text-white-50" href="{% url 'dashboard' %}">
-                            <i class="fas fa-home me-2"></i>Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active text-white" href="{% url 'chat' %}">
-                            <i class="fas fa-comments me-2"></i>Chat Interface
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-white-50" href="{% url 'agent_management' %}">
-                            <i class="fas fa-users me-2"></i>Agent Management
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-white-50" href="{% url 'system_settings' %}">
-                            <i class="fas fa-cog me-2"></i>System Settings
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-white-50" href="{% url 'admin:index' %}">
-                            <i class="fas fa-tools me-2"></i>Admin Panel
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h2 mb-1">AI Chat Interface</h1>
+            <p class="text-muted mb-0">Chat with our intelligent AI assistant</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-danger" id="clearChat">
+                <i class="fas fa-trash me-1"></i>Clear Chat
+            </button>
+            <a href="{% url 'dashboard:conversations' %}" class="btn btn-outline-primary">
+                <i class="fas fa-history me-1"></i>View History
+            </a>
+        </div>
+    </div>
+</div>
 
-        <!-- Main content -->
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">AI Chat Interface</h1>
-                <div class="btn-toolbar mb-2 mb-md-0">
-                    <div class="btn-group me-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clearChat">
-                            <i class="fas fa-trash me-1"></i>Clear Chat
-                        </button>
+<div class="row g-4">
+    <div class="col-lg-8">
+        <!-- Chat Interface -->
+        <div class="chat-container">
+            <div id="chatMessages" class="chat-messages">
+                <div class="message ai">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <strong class="text-primary">AI Assistant</strong>
                     </div>
+                    <p class="mb-0">Hello! I'm your AI assistant. How can I help you today? You can type messages or use voice input.</p>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-8">
-                    <!-- Chat Interface -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">AI Assistant Chat</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="chat-container">
-                                <div id="chatMessages" class="chat-messages">
-                                    <div class="message ai">
-                                        <strong>AI Assistant:</strong> Hello! I'm your AI assistant. How can I help you today?
-                                    </div>
-                                </div>
+            <div class="chat-input mt-3">
+                <div class="input-group">
+                    <input type="text" id="messageInput" class="form-control form-control-lg"
+                           placeholder="Type your message here..." autocomplete="off">
+                    <button id="sendButton" class="btn btn-primary px-4">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
 
-                                <div class="chat-input">
-                                    <input type="text" id="messageInput" class="form-control"
-                                           placeholder="Type your message here..." autocomplete="off">
-                                    <button id="sendButton" class="btn btn-primary">
-                                        <i class="fas fa-paper-plane"></i>
-                                    </button>
-                                </div>
+            <!-- Voice Controls -->
+            <div class="voice-controls mt-3 d-flex justify-content-center">
+                <button id="voiceButton" class="btn btn-outline-success btn-lg px-4">
+                    <i class="fas fa-microphone me-2"></i>Voice Message
+                </button>
+                <div id="recordingStatus" class="ms-3 d-flex align-items-center text-danger fw-semibold" style="display: none;">
+                    <i class="fas fa-circle fa-beat me-2"></i>Recording...
+                </div>
+                <audio id="audioPlayback" controls class="ms-3" style="display: none; max-width: 200px;"></audio>
+            </div>
+        </div>
+    </div>
 
-                                <!-- Voice Controls -->
-                                <div class="voice-controls">
-                                    <button id="voiceButton" class="btn btn-outline-success">
-                                        <i class="fas fa-microphone"></i> Voice Message
-                                    </button>
-                                    <div id="recordingStatus" class="recording-indicator" style="display: none;">
-                                        <i class="fas fa-circle"></i> Recording...
-                                    </div>
-                                    <audio id="audioPlayback" controls style="display: none;"></audio>
-                                </div>
-                            </div>
-                        </div>
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-zap me-2 text-warning"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="sendQuickMessage('Hello, how are you?')">
+                        <i class="fas fa-hand-wave me-2"></i>Greeting
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="sendQuickMessage('What services do you offer?')">
+                        <i class="fas fa-concierge-bell me-2"></i>Services Inquiry
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="sendQuickMessage('I need technical support')">
+                        <i class="fas fa-headset me-2"></i>Technical Support
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="sendQuickMessage('What are your pricing plans?')">
+                        <i class="fas fa-tags me-2"></i>Pricing Information
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conversation Info -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2 text-info"></i>Conversation Info
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Status:</span>
+                        <span class="badge bg-success" id="conversationStatus">Active</span>
                     </div>
                 </div>
-
-                <div class="col-md-4">
-                    <!-- Quick Actions -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">Quick Actions</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="d-grid gap-2">
-                                <button class="btn btn-outline-primary" onclick="sendQuickMessage('Hello, how are you?')">
-                                    Greeting
-                                </button>
-                                <button class="btn btn-outline-primary" onclick="sendQuickMessage('What services do you offer?')">
-                                    Services Inquiry
-                                </button>
-                                <button class="btn btn-outline-primary" onclick="sendQuickMessage('I need technical support')">
-                                    Technical Support
-                                </button>
-                                <button class="btn btn-outline-primary" onclick="sendQuickMessage('What are your pricing plans?')">
-                                    Pricing Information
-                                </button>
-                            </div>
-                        </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Messages:</span>
+                        <span class="fw-semibold" id="messageCount">1</span>
                     </div>
-
-                    <!-- Conversation Info -->
-                    <div class="card mt-3">
-                        <div class="card-header">
-                            <h5 class="mb-0">Conversation Info</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-2">
-                                <strong>Status:</strong> <span id="conversationStatus">Active</span>
-                            </div>
-                            <div class="mb-2">
-                                <strong>Messages:</strong> <span id="messageCount">1</span>
-                            </div>
-                            <div class="mb-2">
-                                <strong>AI Agent:</strong> <span id="aiAgentName">BanglaChat Assistant</span>
-                            </div>
-                        </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">AI Agent:</span>
+                        <span class="fw-semibold text-truncate" id="aiAgentName">BanglaChat Assistant</span>
                     </div>
                 </div>
             </div>
-        </main>
+        </div>
+
+        <!-- Features -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-star me-2 text-warning"></i>Features
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-primary text-white rounded p-2 me-3">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">AI-Powered Responses</h6>
+                        <small class="text-muted">Smart, contextual replies</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-success text-white rounded p-2 me-3">
+                        <i class="fas fa-microphone"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">Voice Input/Output</h6>
+                        <small class="text-muted">Speak naturally</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="bg-info text-white rounded p-2 me-3">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">Conversation History</h6>
+                        <small class="text-muted">Never lose track</small>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 {% endblock %}
 
-{% block extra_js %}
+{% block extra_scripts %}
 <script>
     let conversationId = null;
     let isRecording = false;
@@ -274,7 +233,21 @@
     function addMessage(sender, content) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}`;
-        messageDiv.innerHTML = `<strong>${sender === 'ai' ? 'AI Assistant' : 'You'}:</strong> ${content}`;
+
+        const iconClass = sender === 'ai' ? 'fa-robot' : 'fa-user';
+        const bgColor = sender === 'ai' ? 'bg-primary' : 'bg-success';
+        const senderName = sender === 'ai' ? 'AI Assistant' : 'You';
+
+        messageDiv.innerHTML = `
+            <div class="d-flex align-items-center mb-2">
+                <div class="${bgColor} text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                    <i class="fas ${iconClass}"></i>
+                </div>
+                <strong class="${sender === 'ai' ? 'text-primary' : 'text-success'}">${senderName}</strong>
+            </div>
+            <p class="mb-0">${content}</p>
+        `;
+
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }

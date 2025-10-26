@@ -181,6 +181,14 @@ CORS_ALLOWED_ORIGINS = [
     "https://www.bdchatpro.com",
 ]
 
+# CSRF settings
+CSRF_TRUSTED_ORIGINS = [
+    "https://bdchatpro.com",
+    "https://www.bdchatpro.com",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'
 
