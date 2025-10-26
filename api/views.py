@@ -1,16 +1,19 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from django.db.models import Q
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 from accounts.models import User, Organization
 from chat.models import Conversation, Message, AIAgent
 from dashboard.models import Analytics
 from voice.models import VoiceRecording
+from services.openai_service import OpenAIService
 
 from .serializers import (
     UserSerializer, OrganizationSerializer, ConversationSerializer,
@@ -73,6 +76,8 @@ class AnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
+@csrf_exempt
 def token_view(request):
     """Token authentication"""
     username = request.data.get('username')
@@ -107,8 +112,9 @@ def current_user(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@csrf_exempt
 def send_chat_message(request):
-    """Send a chat message"""
+    """Send a chat message and get AI response"""
     content = request.data.get('content')
     conversation_id = request.data.get('conversation_id')
 
@@ -125,30 +131,88 @@ def send_chat_message(request):
                 user=request.user
             )
         else:
-            # Create new conversation
+            # Create new conversation and assign AI agent
+            ai_agent = AIAgent.objects.filter(
+                organization=request.user.organization,
+                status='active'
+            ).first()
+
             conversation = Conversation.objects.create(
                 user=request.user,
-                organization=request.user.organization
+                organization=request.user.organization,
+                ai_agent=ai_agent
             )
 
         # Create user message
-        message = Message.objects.create(
+        user_message = Message.objects.create(
             conversation=conversation,
             sender_type='user',
             sender=request.user,
             content=content
         )
 
+        # Initialize response data
+        response_data = {
+            'conversation_id': conversation.id,
+            'user_message_id': user_message.id,
+            'status': 'sent'
+        }
+
+        # Generate AI response if agent is assigned
+        if conversation.ai_agent:
+            openai_service = OpenAIService(conversation.organization)
+
+            # Get conversation history
+            conversation_messages = Message.objects.filter(
+                conversation=conversation
+            ).order_by('timestamp')
+
+            # Format messages for OpenAI API
+            messages = []
+            for msg in conversation_messages:
+                if msg.sender_type == 'user':
+                    role = 'user'
+                elif msg.sender_type == 'ai':
+                    role = 'assistant'
+                else:
+                    continue  # Skip system messages for now
+
+                messages.append({
+                    'role': role,
+                    'content': msg.content
+                })
+
+            # Generate AI response
+            ai_response = openai_service.generate_chat_response(
+                messages=messages,
+                ai_agent=conversation.ai_agent
+            )
+
+            if ai_response:
+                # Create AI message
+                ai_message = Message.objects.create(
+                    conversation=conversation,
+                    sender_type='ai',
+                    content=ai_response,
+                    confidence_score=0.9  # Default confidence
+                )
+
+                response_data['ai_message'] = {
+                    'id': ai_message.id,
+                    'content': ai_response,
+                    'timestamp': ai_message.timestamp
+                }
+
+                # Update conversation stats
+                conversation.message_count += 1
+                conversation.ai_responses += 1
+
         # Update conversation stats
         conversation.message_count += 1
         conversation.last_message_at = timezone.now()
         conversation.save()
 
-        return Response({
-            'conversation_id': conversation.id,
-            'message_id': message.id,
-            'status': 'sent'
-        })
+        return Response(response_data)
 
     except Conversation.DoesNotExist:
         return Response(
@@ -163,6 +227,7 @@ def send_chat_message(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@csrf_exempt
 def process_voice(request):
     """Process voice recording"""
     audio_file = request.FILES.get('audio')
@@ -185,34 +250,59 @@ def process_voice(request):
             user=request.user,
             conversation=conversation,
             audio_file=audio_file,
-            status='pending',
+            status='processing',
             file_size=audio_file.size
         )
 
-        # Here you would trigger voice processing (speech-to-text)
-        # For now, we'll just mark it as completed with mock data
-        recording.status = 'completed'
-        recording.transcription = "This is a mock transcription of the voice message."
-        recording.confidence_score = 0.95
-        recording.detected_language = 'en'
-        recording.language_confidence = 0.98
+        # Process voice recording with OpenAI Whisper
+        openai_service = OpenAIService(conversation.organization)
+
+        # Get the file path
+        file_path = recording.audio_file.path
+
+        # Transcribe the audio
+        transcription_result = openai_service.transcribe_audio(file_path)
+
+        if transcription_result['success']:
+            recording.status = 'completed'
+            recording.transcription = transcription_result['transcription']
+            recording.confidence_score = transcription_result['confidence']
+            recording.detected_language = transcription_result['language']
+            recording.language_confidence = 0.95  # Default for Whisper
+        else:
+            recording.status = 'failed'
+            recording.error_message = transcription_result.get('error', 'Transcription failed')
+
+        recording.processing_completed_at = timezone.now()
         recording.save()
 
-        # Create a message from the transcription
-        message = Message.objects.create(
-            conversation=conversation,
-            sender_type='user',
-            sender=request.user,
-            content=recording.transcription,
-            content_type='voice',
-            voice_recording=recording
-        )
+        if recording.status == 'completed':
+            # Create a message from the transcription
+            message = Message.objects.create(
+                conversation=conversation,
+                sender_type='user',
+                sender=request.user,
+                content=recording.transcription,
+                content_type='voice',
+                voice_recording=recording
+            )
 
-        return Response({
-            'recording_id': recording.id,
-            'transcription': recording.transcription,
-            'confidence': recording.confidence_score
-        })
+            # Update conversation stats
+            conversation.message_count += 1
+            conversation.last_message_at = timezone.now()
+            conversation.save()
+
+            return Response({
+                'recording_id': recording.id,
+                'transcription': recording.transcription,
+                'confidence': recording.confidence_score,
+                'message_id': message.id
+            })
+        else:
+            return Response({
+                'recording_id': recording.id,
+                'error': recording.error_message
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     except Conversation.DoesNotExist:
         return Response(

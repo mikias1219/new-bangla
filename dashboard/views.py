@@ -96,6 +96,17 @@ def dashboard_home(request):
     return render(request, 'dashboard/home.html', context)
 
 @login_required
+def chat_interface(request):
+    """Chat interface for testing AI agents"""
+    organization = request.user.organization
+
+    context = {
+        'organization': organization,
+    }
+
+    return render(request, 'chat/chat.html', context)
+
+@login_required
 def analytics_view(request):
     """Analytics dashboard"""
     organization = request.user.organization

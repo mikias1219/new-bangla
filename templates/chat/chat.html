@@ -1,0 +1,420 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Chat - BanglaChatPro{% endblock %}
+
+{% block extra_head %}
+<style>
+    .chat-container {
+        height: 70vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .message {
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        max-width: 80%;
+    }
+    .message.user {
+        background: #007bff;
+        color: white;
+        margin-left: auto;
+        text-align: right;
+    }
+    .message.ai {
+        background: #e9ecef;
+        color: #212529;
+        margin-right: auto;
+    }
+    .chat-input {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    .chat-input input {
+        flex: 1;
+    }
+    .voice-controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        margin-top: 1rem;
+    }
+    .recording-indicator {
+        color: red;
+        animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-3 col-lg-2 d-md-block bg-dark sidebar">
+            <div class="position-sticky pt-3">
+                <h5 class="text-white px-3 mb-3">BanglaChatPro</h5>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link text-white-50" href="{% url 'dashboard' %}">
+                            <i class="fas fa-home me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active text-white" href="{% url 'chat' %}">
+                            <i class="fas fa-comments me-2"></i>Chat Interface
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white-50" href="{% url 'agent_management' %}">
+                            <i class="fas fa-users me-2"></i>Agent Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white-50" href="{% url 'system_settings' %}">
+                            <i class="fas fa-cog me-2"></i>System Settings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white-50" href="{% url 'admin:index' %}">
+                            <i class="fas fa-tools me-2"></i>Admin Panel
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">AI Chat Interface</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clearChat">
+                            <i class="fas fa-trash me-1"></i>Clear Chat
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <!-- Chat Interface -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">AI Assistant Chat</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chat-container">
+                                <div id="chatMessages" class="chat-messages">
+                                    <div class="message ai">
+                                        <strong>AI Assistant:</strong> Hello! I'm your AI assistant. How can I help you today?
+                                    </div>
+                                </div>
+
+                                <div class="chat-input">
+                                    <input type="text" id="messageInput" class="form-control"
+                                           placeholder="Type your message here..." autocomplete="off">
+                                    <button id="sendButton" class="btn btn-primary">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Voice Controls -->
+                                <div class="voice-controls">
+                                    <button id="voiceButton" class="btn btn-outline-success">
+                                        <i class="fas fa-microphone"></i> Voice Message
+                                    </button>
+                                    <div id="recordingStatus" class="recording-indicator" style="display: none;">
+                                        <i class="fas fa-circle"></i> Recording...
+                                    </div>
+                                    <audio id="audioPlayback" controls style="display: none;"></audio>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <!-- Quick Actions -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Quick Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary" onclick="sendQuickMessage('Hello, how are you?')">
+                                    Greeting
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="sendQuickMessage('What services do you offer?')">
+                                    Services Inquiry
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="sendQuickMessage('I need technical support')">
+                                    Technical Support
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="sendQuickMessage('What are your pricing plans?')">
+                                    Pricing Information
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conversation Info -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5 class="mb-0">Conversation Info</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-2">
+                                <strong>Status:</strong> <span id="conversationStatus">Active</span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Messages:</strong> <span id="messageCount">1</span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>AI Agent:</strong> <span id="aiAgentName">BanglaChat Assistant</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let conversationId = null;
+    let isRecording = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+
+    // DOM elements
+    const chatMessages = document.getElementById('chatMessages');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const voiceButton = document.getElementById('voiceButton');
+    const recordingStatus = document.getElementById('recordingStatus');
+    const audioPlayback = document.getElementById('audioPlayback');
+    const messageCount = document.getElementById('messageCount');
+
+    // CSRF token
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                     getCookie('csrftoken');
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Send text message
+    async function sendMessage(content) {
+        if (!content.trim()) return;
+
+        try {
+            const response = await fetch('/api/chat/send/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                },
+                body: JSON.stringify({
+                    content: content,
+                    conversation_id: conversationId
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                conversationId = data.conversation_id;
+
+                // Add AI response if available
+                if (data.ai_message) {
+                    addMessage('ai', data.ai_message.content);
+                }
+
+                updateMessageCount();
+                messageInput.value = '';
+            } else {
+                addMessage('ai', `Error: ${data.error}`);
+            }
+        } catch (error) {
+            addMessage('ai', `Error: ${error.message}`);
+        }
+    }
+
+    // Add message to chat
+    function addMessage(sender, content) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+        messageDiv.innerHTML = `<strong>${sender === 'ai' ? 'AI Assistant' : 'You'}:</strong> ${content}`;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Quick message functions
+    function sendQuickMessage(message) {
+        messageInput.value = message;
+        sendMessage(message);
+    }
+
+    // Voice recording functions
+    async function startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                audioChunks = [];
+
+                // Create audio URL for playback
+                const audioUrl = URL.createObjectURL(audioBlob);
+                audioPlayback.src = audioUrl;
+                audioPlayback.style.display = 'block';
+
+                // Send to server for processing
+                await sendVoiceMessage(audioBlob);
+
+                // Stop all tracks
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            recordingStatus.style.display = 'inline';
+            voiceButton.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
+            voiceButton.classList.remove('btn-outline-success');
+            voiceButton.classList.add('btn-danger');
+
+        } catch (error) {
+            alert('Error accessing microphone: ' + error.message);
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+            isRecording = false;
+            recordingStatus.style.display = 'none';
+            voiceButton.innerHTML = '<i class="fas fa-microphone"></i> Voice Message';
+            voiceButton.classList.remove('btn-danger');
+            voiceButton.classList.add('btn-outline-success');
+        }
+    }
+
+    async function sendVoiceMessage(audioBlob) {
+        if (!conversationId) {
+            // Create conversation first
+            await sendMessage('Voice message');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'voice_message.wav');
+        formData.append('conversation_id', conversationId);
+
+        try {
+            const response = await fetch('/api/voice/process/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                addMessage('user', `Voice: "${data.transcription}"`);
+                // AI will respond automatically if configured
+                setTimeout(() => {
+                    // Check for AI response
+                    sendMessage(data.transcription);
+                }, 1000);
+            } else {
+                addMessage('ai', `Voice processing error: ${data.error}`);
+            }
+        } catch (error) {
+            addMessage('ai', `Voice processing error: ${error.message}`);
+        }
+    }
+
+    // Clear chat
+    function clearChat() {
+        if (confirm('Are you sure you want to clear the chat?')) {
+            chatMessages.innerHTML = '<div class="message ai"><strong>AI Assistant:</strong> Hello! I\'m your AI assistant. How can I help you today?</div>';
+            conversationId = null;
+            messageCount.textContent = '1';
+        }
+    }
+
+    function updateMessageCount() {
+        const messages = chatMessages.querySelectorAll('.message');
+        messageCount.textContent = messages.length;
+    }
+
+    // Event listeners
+    sendButton.addEventListener('click', () => {
+        const message = messageInput.value.trim();
+        if (message) {
+            addMessage('user', message);
+            sendMessage(message);
+        }
+    });
+
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const message = messageInput.value.trim();
+            if (message) {
+                addMessage('user', message);
+                sendMessage(message);
+            }
+        }
+    });
+
+    voiceButton.addEventListener('click', () => {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    });
+
+    document.getElementById('clearChat').addEventListener('click', clearChat);
+
+    // Initialize
+    updateMessageCount();
+</script>
+{% endblock %}
