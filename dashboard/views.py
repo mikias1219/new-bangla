@@ -68,6 +68,7 @@ def dashboard_home(request):
 
     # Get all agents for this organization
     agents = AIAgent.objects.filter(organization=organization)
+    active_agents = agents.filter(status='active').count()
 
     # Get conversations for the user
     conversations = Conversation.objects.filter(user=user).order_by('-last_message_at')
@@ -88,6 +89,7 @@ def dashboard_home(request):
         'notifications': notifications,
         'system_alerts': system_alerts,
         'agents': agents,
+        'active_agents': active_agents,
         'conversations': conversations,
         'avg_rating': avg_rating,
         'total_messages': total_messages,
