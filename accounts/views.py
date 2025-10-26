@@ -44,6 +44,7 @@ def register_view(request):
             login(request, user)
             messages.success(request, 'Registration successful! Welcome to BanglaChatPro.')
             return redirect('dashboard:home')
+        # If form is invalid, it will fall through to the render below with errors
     else:
         form = UserRegistrationForm()
 

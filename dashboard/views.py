@@ -66,11 +66,31 @@ def dashboard_home(request):
         timestamp__gte=timezone.now() - timedelta(hours=24)
     ).order_by('-timestamp')[:5]
 
+    # Get all agents for this organization
+    agents = AIAgent.objects.filter(organization=organization)
+
+    # Get conversations for the user
+    conversations = Conversation.objects.filter(user=user).order_by('-last_message_at')
+
+    # Calculate average rating for user's conversations
+    avg_rating = Feedback.objects.filter(
+        conversation__user=user
+    ).aggregate(avg_rating=Avg('rating'))['avg_rating'] or 0
+
+    # Get total messages count
+    total_messages = Message.objects.filter(
+        conversation__user=user
+    ).count()
+
     context = {
         'analytics': analytics_data,
         'recent_conversations': recent_conversations,
         'notifications': notifications,
         'system_alerts': system_alerts,
+        'agents': agents,
+        'conversations': conversations,
+        'avg_rating': avg_rating,
+        'total_messages': total_messages,
         'organization': organization,
     }
 
@@ -197,12 +217,22 @@ def agent_management(request):
             'avg_rating': round(avg_rating, 1),
         })
 
+    # Get conversations for the user
+    conversations = Conversation.objects.filter(user=user).order_by('-last_message_at')
+
+    # Calculate average rating for user's conversations
+    avg_rating = Feedback.objects.filter(
+        conversation__user=user
+    ).aggregate(avg_rating=Avg('rating'))['avg_rating'] or 0
+
     context = {
         'agents': agents,
         'total_agents': total_agents,
         'active_agents': active_agents,
         'total_conversations': total_conversations,
         'agent_performance': agent_performance,
+        'conversations': conversations,
+        'avg_rating': avg_rating,
         'organization': organization,
     }
 

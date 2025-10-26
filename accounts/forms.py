@@ -6,20 +6,25 @@ class UserRegistrationForm(UserCreationForm):
     """User registration form"""
 
     email = forms.EmailField(required=True)
-    organization = forms.ModelChoiceField(
-        queryset=Organization.objects.filter(is_active=True),
-        required=True,
-        empty_label="Select Organization"
-    )
+    phone = forms.CharField(max_length=15, required=False, help_text="Optional phone number")
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name', 'organization', 'password1', 'password2')
+        fields = ('username', 'email', 'first_name', 'last_name', 'phone', 'password1', 'password2')
 
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data['email']
-        user.organization = self.cleaned_data['organization']
+        user.phone = self.cleaned_data.get('phone', '')
+
+        # Automatically assign to the default organization
+        try:
+            default_org = Organization.objects.filter(is_active=True).first()
+            if default_org:
+                user.organization = default_org
+        except Organization.DoesNotExist:
+            pass  # Will handle this in the view
+
         if commit:
             user.save()
         return user
