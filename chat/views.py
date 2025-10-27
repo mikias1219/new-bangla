@@ -33,7 +33,7 @@ def chat_interface(request):
         'conversations': conversations,
     }
 
-    return render(request, 'chat/interface.html', context)
+    return render(request, 'chat/chat.html', context)
 
 @login_required
 def conversation_detail(request, conversation_id):

@@ -26,6 +26,7 @@
         <!-- Chat Interface -->
         <div class="chat-container">
             <div id="chatMessages" class="chat-messages">
+                <!-- Welcome message -->
                 <div class="message ai">
                     <div class="d-flex align-items-center mb-2">
                         <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
@@ -33,8 +34,9 @@
                         </div>
                         <strong class="text-primary">AI Assistant</strong>
                     </div>
-                    <p class="mb-0">Hello! I'm your AI assistant. How can I help you today? You can type messages or use voice input.</p>
+                    <p class="mb-0">👋 Hello! I'm your AI assistant. How can I help you today? You can type messages or use voice input.</p>
                 </div>
+            </div>
             </div>
 
             <div class="chat-input mt-3">
@@ -69,7 +71,7 @@
                 </h5>
             </div>
             <div class="card-body">
-                <div class="d-grid gap-2">
+                <div class="quick-actions d-grid gap-2">
                     <button class="btn btn-outline-primary" onclick="sendQuickMessage('Hello, how are you?')">
                         <i class="fas fa-hand-wave me-2"></i>Greeting
                     </button>
@@ -123,31 +125,33 @@
                 </h5>
             </div>
             <div class="card-body">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="bg-primary text-white rounded p-2 me-3">
-                        <i class="fas fa-brain"></i>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="feature-card">
+                            <div class="icon bg-primary text-white">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                            <h6 class="mb-1">AI-Powered Responses</h6>
+                            <small class="text-muted">Smart, contextual replies</small>
+                        </div>
                     </div>
-                    <div>
-                        <h6 class="mb-0">AI-Powered Responses</h6>
-                        <small class="text-muted">Smart, contextual replies</small>
+                    <div class="col-12">
+                        <div class="feature-card">
+                            <div class="icon bg-success text-white">
+                                <i class="fas fa-microphone"></i>
+                            </div>
+                            <h6 class="mb-1">Voice Input/Output</h6>
+                            <small class="text-muted">Speak naturally</small>
+                        </div>
                     </div>
-                </div>
-                <div class="d-flex align-items-center mb-3">
-                    <div class="bg-success text-white rounded p-2 me-3">
-                        <i class="fas fa-microphone"></i>
-                    </div>
-                    <div>
-                        <h6 class="mb-0">Voice Input/Output</h6>
-                        <small class="text-muted">Speak naturally</small>
-                    </div>
-                </div>
-                <div class="d-flex align-items-center">
-                    <div class="bg-info text-white rounded p-2 me-3">
-                        <i class="fas fa-history"></i>
-                    </div>
-                    <div>
-                        <h6 class="mb-0">Conversation History</h6>
-                        <small class="text-muted">Never lose track</small>
+                    <div class="col-12">
+                        <div class="feature-card">
+                            <div class="icon bg-info text-white">
+                                <i class="fas fa-history"></i>
+                            </div>
+                            <h6 class="mb-1">Conversation History</h6>
+                            <small class="text-muted">Never lose track</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -196,12 +200,16 @@
     async function sendMessage(content) {
         if (!content.trim()) return;
 
+        // Add user message to UI immediately
+        addMessage('user', content);
+
         try {
             const response = await fetch('/api/chat/send/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken,
+                    'Authorization': `Token ${getAuthToken()}`,
                 },
                 body: JSON.stringify({
                     content: content,
@@ -215,18 +223,39 @@
                 conversationId = data.conversation_id;
 
                 // Add AI response if available
-                if (data.ai_message) {
+                if (data.ai_message && data.ai_message.content) {
                     addMessage('ai', data.ai_message.content);
+                } else if (data.message) {
+                    // Fallback for different response format
+                    addMessage('ai', data.message);
                 }
 
                 updateMessageCount();
                 messageInput.value = '';
             } else {
-                addMessage('ai', `Error: ${data.error}`);
+                addMessage('ai', `Error: ${data.error || 'Unknown error occurred'}`);
             }
         } catch (error) {
             addMessage('ai', `Error: ${error.message}`);
         }
+    }
+
+    // Get auth token from localStorage or cookies
+    function getAuthToken() {
+        // Try localStorage first
+        let token = localStorage.getItem('auth_token');
+        if (token) return token;
+
+        // Try session cookie
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'auth_token') {
+                return decodeURIComponent(value);
+            }
+        }
+
+        return '';
     }
 
     // Add message to chat
@@ -289,7 +318,7 @@
             recordingStatus.style.display = 'inline';
             voiceButton.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
             voiceButton.classList.remove('btn-outline-success');
-            voiceButton.classList.add('btn-danger');
+            voiceButton.classList.add('btn-danger', 'recording-animation');
 
         } catch (error) {
             alert('Error accessing microphone: ' + error.message);
@@ -302,7 +331,7 @@
             isRecording = false;
             recordingStatus.style.display = 'none';
             voiceButton.innerHTML = '<i class="fas fa-microphone"></i> Voice Message';
-            voiceButton.classList.remove('btn-danger');
+            voiceButton.classList.remove('btn-danger', 'recording-animation');
             voiceButton.classList.add('btn-outline-success');
         }
     }
