@@ -8,7 +8,7 @@ gunicorn==23.0.0
 Pillow==12.0.0
 
 # Additional packages for AI and voice processing
-openai==1.54.0
+openai==0.28.0
 requests==2.31.0
 python-dotenv==1.0.0
 
