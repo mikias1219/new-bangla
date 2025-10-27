@@ -26,7 +26,6 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('chat/', include('chat.urls')),
     path('voice/', include('voice.urls')),
-    path('ivr/', include('ivr.urls')),
 ]
 
 # Serve media files during development

@@ -80,3 +80,7 @@ backend/bangla_chat_pro.db
 # OS
 .DS_Store
 Thumbs.db
+
+# Database files
+db.sqlite3
+*.sqlite3
