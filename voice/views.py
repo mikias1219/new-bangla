@@ -1,10 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from django.utils import timezone
 from .models import VoiceRecording, VoiceSession, SpeechSynthesis
+from services.twilio_service import TwilioService
+from accounts.models import Organization
 import json
 
 @login_required
@@ -163,3 +166,134 @@ def recording_detail(request, recording_id):
     }
 
     return render(request, 'voice/recording_detail.html', context)
+
+
+# Twilio Webhook Views (No authentication required for webhooks)
+@csrf_exempt
+@require_POST
+def twilio_voice_webhook(request, organization_id):
+    """Handle incoming Twilio voice calls"""
+    try:
+        organization = Organization.objects.get(id=organization_id)
+
+        twilio_service = TwilioService(organization)
+        twiml_response = twilio_service.generate_twiml(request.POST, organization_id)
+
+        return HttpResponse(twiml_response, content_type='text/xml')
+
+    except Organization.DoesNotExist:
+        return HttpResponse('<Response><Say>Organization not found.</Say></Response>', content_type='text/xml')
+    except Exception as e:
+        return HttpResponse(f'<Response><Say>Error: {str(e)}</Say></Response>', content_type='text/xml')
+
+
+@csrf_exempt
+@require_POST
+def twilio_speech_process(request, organization_id):
+    """Process speech input from Twilio calls"""
+    try:
+        organization = Organization.objects.get(id=organization_id)
+
+        twilio_service = TwilioService(organization)
+        twiml_response = twilio_service.process_speech(request.POST, organization_id)
+
+        return HttpResponse(twiml_response, content_type='text/xml')
+
+    except Organization.DoesNotExist:
+        return HttpResponse('<Response><Say>Organization not found.</Say></Response>', content_type='text/xml')
+    except Exception as e:
+        return HttpResponse(f'<Response><Say>Error: {str(e)}</Say></Response>', content_type='text/xml')
+
+
+@csrf_exempt
+@require_POST
+def twilio_sms_webhook(request, organization_id):
+    """Handle incoming Twilio SMS messages"""
+    try:
+        organization = Organization.objects.get(id=organization_id)
+
+        # Get message details
+        from_number = request.POST.get('From')
+        to_number = request.POST.get('To')
+        message_body = request.POST.get('Body')
+        message_sid = request.POST.get('MessageSid')
+
+        # Process SMS with AI (similar to voice processing)
+        twilio_service = TwilioService(organization)
+
+        # For SMS, we'll create a simple conversation and respond
+        conversation = twilio_service._get_or_create_voice_conversation(from_number, organization_id)
+
+        # Create user message
+        from chat.models import Message
+        Message.objects.create(
+            conversation=conversation,
+            sender_type='user',
+            sender=conversation.user,
+            content=f"SMS: {message_body}"
+        )
+
+        # Generate AI response
+        ai_response = twilio_service._process_with_ai(conversation, message_body)
+
+        # Send SMS response
+        twilio_service.send_sms(from_number, ai_response)
+
+        # Create AI message
+        Message.objects.create(
+            conversation=conversation,
+            sender_type='ai',
+            content=ai_response
+        )
+
+        return HttpResponse('', content_type='text/xml')  # Twilio expects empty response for SMS
+
+    except Exception as e:
+        # Log error but return empty response to Twilio
+        print(f"Twilio SMS error: {e}")
+        return HttpResponse('', content_type='text/xml')
+
+
+@login_required
+def initiate_call(request):
+    """Initiate outbound call (for testing/admin)"""
+    if request.method == 'POST':
+        to_number = request.POST.get('to_number')
+        organization = request.user.organization
+
+        if not organization:
+            messages.error(request, 'No organization associated with your account.')
+            return redirect('voice:interface')
+
+        try:
+            twilio_service = TwilioService(organization)
+            call_sid = twilio_service.make_call(to_number)
+
+            messages.success(request, f'Call initiated successfully. Call SID: {call_sid}')
+        except Exception as e:
+            messages.error(request, f'Failed to initiate call: {str(e)}')
+
+    return redirect('voice:interface')
+
+
+@login_required
+def send_sms(request):
+    """Send SMS message (for testing/admin)"""
+    if request.method == 'POST':
+        to_number = request.POST.get('to_number')
+        message = request.POST.get('message')
+        organization = request.user.organization
+
+        if not organization:
+            messages.error(request, 'No organization associated with your account.')
+            return redirect('voice:interface')
+
+        try:
+            twilio_service = TwilioService(organization)
+            message_sid = twilio_service.send_sms(to_number, message)
+
+            messages.success(request, f'SMS sent successfully. Message SID: {message_sid}')
+        except Exception as e:
+            messages.error(request, f'Failed to send SMS: {str(e)}')
+
+    return redirect('voice:interface')

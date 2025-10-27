@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     'dashboard',
     'voice',
     'api',
+    'social_media',
+    'admin_panel',
 ]
 
 MIDDLEWARE = [
