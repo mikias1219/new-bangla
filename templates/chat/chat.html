@@ -283,7 +283,7 @@
 
     // Quick message functions
     function sendQuickMessage(message) {
-        messageInput.value = message;
+        addMessage('user', message);
         sendMessage(message);
     }
 
@@ -391,7 +391,7 @@
     sendButton.addEventListener('click', () => {
         const message = messageInput.value.trim();
         if (message) {
-            addMessage('user', message);
+            // Don't add message here, sendMessage() will add it
             sendMessage(message);
         }
     });
@@ -400,7 +400,7 @@
         if (e.key === 'Enter') {
             const message = messageInput.value.trim();
             if (message) {
-                addMessage('user', message);
+                // Don't add message here, sendMessage() will add it
                 sendMessage(message);
             }
         }

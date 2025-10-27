@@ -94,6 +94,7 @@
     color: white;
     margin-left: 2rem;
     border-bottom-right-radius: 0.25rem;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .message.user::before {
