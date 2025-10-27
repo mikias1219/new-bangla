@@ -45,7 +45,10 @@ class OpenAIService:
                 "That's an interesting question. Let me provide you with some helpful information.",
                 "I understand your concern. Here's what I can tell you about that.",
                 "Thank you for reaching out. I'd be happy to assist you with this.",
-                "That's a great question! Here's what I know about that topic."
+                "That's a great question! Here's what I know about that topic.",
+                "আপনার বার্তার জন্য ধন্যবাদ! আমি আপনার যেকোনো প্রশ্নে সাহায্য করতে এখানে আছি।",
+                "এটি একটি আকর্ষণীয় প্রশ্ন। আমি আপনাকে কিছু সহায়ক তথ্য দিতে পারি।",
+                "আমি আপনার উদ্বেগ বুঝতে পারছি। এ সম্পর্কে আমি যা বলতে পারি তা এখানে।"
             ]
             import random
             return random.choice(mock_responses)
