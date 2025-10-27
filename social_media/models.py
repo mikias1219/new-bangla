@@ -56,7 +56,6 @@ class SocialMediaAccount(models.Model):
     def __str__(self):
         return f"{self.organization.name} - {self.platform} - {self.account_name}"
 
-
 class SocialMediaMessage(models.Model):
     """Messages from social media platforms"""
 
