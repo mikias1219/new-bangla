@@ -306,7 +306,9 @@
                             <template x-for="message in chatMessages" :key="message.id">
                                 <div class="flex" :class="message.sender === 'user' ? 'justify-end' : 'justify-start'">
                                     <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg" 
-                                         :class="message.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'">
+                                         :class="message.sender === 'user' ? 'bg-blue-500 text-white' : 
+                                                message.sender === 'system' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' : 
+                                                'bg-gray-200 text-gray-800'">
                                         <p x-text="message.text"></p>
                                         <p class="text-xs mt-1 opacity-70" x-text="message.timestamp"></p>
                                     </div>
@@ -412,12 +414,12 @@
                             <h5 class="font-medium text-gray-900 mb-2">Test Result:</h5>
                             <pre x-text="JSON.stringify(voiceTestResult, null, 2)" class="text-sm text-gray-700"></pre>
                             <div x-show="voiceTestResult && (voiceTestResult.audio_url || voiceTestResult.error)" class="mt-2">
-                                <div x-show="voiceTestResult.audio_url" class="mb-2">
+                                <div x-show="voiceTestResult && voiceTestResult.audio_url" class="mb-2">
                                     <audio controls class="w-full">
                                         <source :src="voiceTestResult.audio_url" type="audio/mpeg">
                                     </audio>
                                 </div>
-                                <div x-show="voiceTestResult.error" class="text-red-600 text-sm">
+                                <div x-show="voiceTestResult && voiceTestResult.error" class="text-red-600 text-sm">
                                     <span x-text="voiceTestResult.error"></span>
                                 </div>
                             </div>
@@ -685,6 +687,18 @@
                         this.recognition.onerror = (event) => {
                             console.error('Speech recognition error:', event.error);
                             this.isRecording = false;
+                            this.isVoiceMode = false;
+                            
+                            // Handle specific errors
+                            if (event.error === 'no-speech') {
+                                this.addMessage('system', 'No speech detected. Please try again.');
+                            } else if (event.error === 'not-allowed') {
+                                this.addMessage('system', 'Microphone access denied. Please allow microphone access.');
+                            } else if (event.error === 'network') {
+                                this.addMessage('system', 'Network error. Please check your connection.');
+                            } else {
+                                this.addMessage('system', `Speech recognition error: ${event.error}`);
+                            }
                         };
                         
                         this.recognition.onend = () => {
@@ -710,7 +724,8 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-CSRFToken': this.getCSRFToken()
+                                'X-CSRFToken': this.getCSRFToken(),
+                                'Authorization': this.getAuthToken()
                             },
                             body: JSON.stringify({
                                 client_id: this.testClientId,
@@ -723,7 +738,8 @@
                             const data = await response.json();
                             this.addMessage('ai', data.ai_response);
                         } else {
-                            this.addMessage('ai', 'Sorry, I encountered an error. Please try again.');
+                            const errorData = await response.json().catch(() => ({}));
+                            this.addMessage('ai', `Error: ${errorData.error || 'Please try again.'}`);
                         }
                     } catch (error) {
                         console.error('Chat error:', error);
@@ -860,7 +876,14 @@
                 
                 getCSRFToken() {
                     return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-                }
+                },
+                
+                getAuthToken() {
+                    // Try to get token from localStorage or sessionStorage
+                    return localStorage.getItem('authToken') || 
+                           sessionStorage.getItem('authToken') || 
+                           'Token c0ec81c0d5b7cffbd3e94f63b97e1d624b9f0054'; // Fallback test token
+                },
             }
         }
     </script>
