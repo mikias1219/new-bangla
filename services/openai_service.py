@@ -15,7 +15,7 @@ class OpenAIService:
         if not self.api_key:
             logger.warning("OpenAI API key not found in environment variables")
         else:
-            openai.api_key = self.api_key
+            self.client = openai.OpenAI(api_key=self.api_key)
     
     def generate_chat_response(
         self, 
@@ -72,7 +72,7 @@ class OpenAIService:
             messages.append({"role": "user", "content": message})
             
             # Call OpenAI API
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=model,
                 messages=messages,
                 temperature=temperature,
@@ -127,7 +127,7 @@ class OpenAIService:
         
         try:
             # Generate speech
-            response = openai.audio.speech.create(
+            response = self.client.audio.speech.create(
                 model=model,
                 voice=voice,
                 input=text,
