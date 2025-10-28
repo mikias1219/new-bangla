@@ -17,6 +17,21 @@ class OpenAIService:
         else:
             self.client = openai.OpenAI(api_key=self.api_key)
     
+    def _detect_language(self, text: str) -> str:
+        """Detect if the text is in English or Bangla"""
+        # Simple language detection based on character sets
+        bangla_chars = set('অআইঈউঊঋএঐওঔকখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহড়ঢ়য়ৎ')
+        
+        # Count Bangla characters
+        bangla_count = sum(1 for char in text if char in bangla_chars)
+        total_chars = len([c for c in text if c.isalpha()])
+        
+        # If more than 30% of alphabetic characters are Bangla, consider it Bangla
+        if total_chars > 0 and (bangla_count / total_chars) > 0.3:
+            return 'bangla'
+        else:
+            return 'english'
+    
     def generate_chat_response(
         self, 
         message: str, 
@@ -48,14 +63,24 @@ class OpenAIService:
             }
         
         try:
-            # Default system prompt for Bangla responses
+            # Detect language and set appropriate system prompt
+            detected_language = self._detect_language(message)
+            
             if not system_prompt:
-                system_prompt = """
-                আপনি একজন বন্ধুত্বপূর্ণ এবং সহায়ক AI সহকারী। 
-                আপনার কাজ হল বাংলা ভাষায় ব্যবহারকারীদের সাহায্য করা।
-                সবসময় বাংলায় উত্তর দিন, যদি না ব্যবহারকারী ইংরেজি চান।
-                বিনয়ী এবং সহায়ক হন।
-                """
+                if detected_language == 'english':
+                    system_prompt = """
+                    You are a friendly and helpful AI assistant.
+                    Your job is to help users in English.
+                    Always respond in English unless the user asks for Bengali.
+                    Be polite and helpful.
+                    """
+                else:  # Bangla
+                    system_prompt = """
+                    আপনি একজন বন্ধুত্বপূর্ণ এবং সহায়ক AI সহকারী। 
+                    আপনার কাজ হল বাংলা ভাষায় ব্যবহারকারীদের সাহায্য করা।
+                    সবসময় বাংলায় উত্তর দিন, যদি না ব্যবহারকারী ইংরেজি চান।
+                    বিনয়ী এবং সহায়ক হন।
+                    """
             
             # Prepare messages
             messages = [{"role": "system", "content": system_prompt}]
