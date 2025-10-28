@@ -28,8 +28,8 @@ from bangla_chat_pro.admin_api import (
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # Custom Admin Dashboard
-    path('admin-dashboard/', custom_admin_dashboard, name='custom_admin_dashboard'),
+    # Unified Admin Dashboard
+    path('admin-dashboard/', custom_admin_dashboard, name='unified_admin_dashboard'),
     path('admin/api/dashboard-data/', dashboard_data_api, name='dashboard_data_api'),
     path('admin/api/organizations/', organizations_api, name='organizations_api'),
     path('admin/api/users/', users_api, name='users_api'),

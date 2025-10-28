@@ -38,7 +38,7 @@ def custom_admin_dashboard(request):
         'pending_organizations': pending_organizations,
     }
     
-    return render(request, 'admin/custom_admin_dashboard.html', context)
+    return render(request, 'admin/unified_admin_dashboard.html', context)
 
 
 @login_required

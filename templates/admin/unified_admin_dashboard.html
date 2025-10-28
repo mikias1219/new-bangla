@@ -1,0 +1,2020 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Admin Dashboard - BanglaChatPro{% endblock %}
+
+{% block content %}
+<div class="admin-wrapper">
+    <!-- Sidebar -->
+    <nav class="admin-sidebar" id="adminSidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <i class="fas fa-crown"></i>
+                <span>Admin Panel</span>
+            </div>
+            <button class="sidebar-toggle d-lg-none" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <div class="sidebar-menu">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#dashboard" data-section="dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#organizations" data-section="organizations">
+                        <i class="fas fa-building"></i>
+                        <span>Organizations</span>
+                        <span class="badge badge-warning" id="pending-count">{{ pending_approvals }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#users" data-section="users">
+                        <i class="fas fa-users"></i>
+                        <span>Users</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#chat" data-section="chat">
+                        <i class="fas fa-comments"></i>
+                        <span>Chat Management</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#voice" data-section="voice">
+                        <i class="fas fa-phone"></i>
+                        <span>Voice Management</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#social" data-section="social">
+                        <i class="fab fa-facebook"></i>
+                        <span>Social Media</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#onboarding" data-section="onboarding">
+                        <i class="fas fa-rocket"></i>
+                        <span>Onboarding</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#testing" data-section="testing">
+                        <i class="fas fa-flask"></i>
+                        <span>Feature Testing</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#analytics" data-section="analytics">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Analytics</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#settings" data-section="settings">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="user-details">
+                    <div class="user-name">{{ user.username }}</div>
+                    <div class="user-role">Super Admin</div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="admin-main">
+        <!-- Top Header -->
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle-mobile d-lg-none" id="sidebarToggleMobile">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1 class="page-title" id="pageTitle">Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <div class="header-actions">
+                    <button class="btn btn-outline-light" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">Profile</a></li>
+                            <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="admin-content">
+            <!-- Dashboard Section -->
+            <div class="content-section active" id="dashboard-section">
+                <div class="row g-4">
+                    <!-- Statistics Cards -->
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card stat-primary">
+                            <div class="stat-icon">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="total-organizations">{{ total_organizations }}</h3>
+                                <p>Organizations</p>
+                                <small class="text-success">
+                                    <i class="fas fa-arrow-up"></i> +12% from last month
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card stat-success">
+                            <div class="stat-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="total-users">{{ total_users }}</h3>
+                                <p>Users</p>
+                                <small class="text-success">
+                                    <i class="fas fa-arrow-up"></i> +8% from last month
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card stat-warning">
+                            <div class="stat-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="pending-approvals">{{ pending_approvals }}</h3>
+                                <p>Pending Approvals</p>
+                                <small class="text-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> Needs attention
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card stat-info">
+                            <div class="stat-icon">
+                                <i class="fas fa-comments"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="total-conversations">{{ total_conversations }}</h3>
+                                <p>Conversations</p>
+                                <small class="text-success">
+                                    <i class="fas fa-arrow-up"></i> +15% from last month
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pending Approvals -->
+                    <div class="col-12">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-clock me-2"></i>Pending Organization Approvals</h5>
+                                <button class="btn btn-primary btn-sm" onclick="refreshApprovals()">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="pending-approvals-list">
+                                    {% for org in pending_organizations %}
+                                    <div class="approval-item">
+                                        <div class="approval-info">
+                                            <div class="approval-avatar">
+                                                <i class="fas fa-building"></i>
+                                            </div>
+                                            <div class="approval-details">
+                                                <h6>{{ org.name }}</h6>
+                                                <p><i class="fas fa-envelope me-1"></i>{{ org.contact_email }}</p>
+                                                <span class="badge badge-secondary">{{ org.subscription_plan|title }} Plan</span>
+                                            </div>
+                                        </div>
+                                        <div class="approval-actions">
+                                            <button class="btn btn-success btn-sm" onclick="approveOrganization({{ org.id }})">
+                                                <i class="fas fa-check"></i> Approve
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" onclick="rejectOrganization({{ org.id }})">
+                                                <i class="fas fa-times"></i> Reject
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-check-circle fa-3x mb-3"></i>
+                                        <h5>No Pending Approvals</h5>
+                                        <p>All organizations have been processed</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Status -->
+                    <div class="col-12">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-heartbeat me-2"></i>System Status</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3 col-6">
+                                        <div class="status-item">
+                                            <div class="status-indicator online"></div>
+                                            <div class="status-info">
+                                                <h6>Database</h6>
+                                                <span>Online</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <div class="status-item">
+                                            <div class="status-indicator online"></div>
+                                            <div class="status-info">
+                                                <h6>API Services</h6>
+                                                <span>Online</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <div class="status-item">
+                                            <div class="status-indicator online"></div>
+                                            <div class="status-info">
+                                                <h6>Voice Services</h6>
+                                                <span>Online</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <div class="status-item">
+                                            <div class="status-indicator online"></div>
+                                            <div class="status-info">
+                                                <h6>Social Media</h6>
+                                                <span>Online</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Organizations Section -->
+            <div class="content-section" id="organizations-section">
+                <div class="admin-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-building me-2"></i>Organization Management</h5>
+                        <button class="btn btn-primary" onclick="showAddOrganizationModal()">
+                            <i class="fas fa-plus me-1"></i>Add Organization
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Status</th>
+                                        <th>Plan</th>
+                                        <th>Users</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="organizations-table">
+                                    <!-- Organizations will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div class="content-section" id="users-section">
+                <div class="admin-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-users me-2"></i>User Management</h5>
+                        <button class="btn btn-primary" onclick="showAddUserModal()">
+                            <i class="fas fa-plus me-1"></i>Add User
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Email</th>
+                                        <th>Organization</th>
+                                        <th>Status</th>
+                                        <th>Last Login</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table">
+                                    <!-- Users will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Management Section -->
+            <div class="content-section" id="chat-section">
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-comments me-2"></i>Recent Conversations</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>User</th>
+                                                <th>Organization</th>
+                                                <th>Status</th>
+                                                <th>Messages</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="conversations-table">
+                                            <!-- Conversations will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-robot me-2"></i>AI Agents</h5>
+                                <button class="btn btn-primary btn-sm" onclick="showAddAIAgentModal()">
+                                    <i class="fas fa-plus me-1"></i>Add AI Agent
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Organization</th>
+                                                <th>Status</th>
+                                                <th>Model</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ai-agents-table">
+                                            <!-- AI Agents will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Voice Management Section -->
+            <div class="content-section" id="voice-section">
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-phone me-2"></i>Voice Sessions</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>User</th>
+                                                <th>Status</th>
+                                                <th>Duration</th>
+                                                <th>Started</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="voice-sessions-table">
+                                            <!-- Voice sessions will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-microphone me-2"></i>Voice Recordings</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>User</th>
+                                                <th>Status</th>
+                                                <th>Duration</th>
+                                                <th>Created</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="voice-recordings-table">
+                                            <!-- Voice recordings will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Social Media Section -->
+            <div class="content-section" id="social-section">
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fab fa-facebook me-2"></i>Social Media Accounts</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Platform</th>
+                                                <th>Account</th>
+                                                <th>Organization</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="social-accounts-table">
+                                            <!-- Social accounts will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-envelope me-2"></i>Social Messages</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Platform</th>
+                                                <th>Sender</th>
+                                                <th>Type</th>
+                                                <th>Received</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="social-messages-table">
+                                            <!-- Social messages will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onboarding Section -->
+            <div class="content-section" id="onboarding-section">
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-rocket me-2"></i>Onboarding Steps</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Organization</th>
+                                                <th>Step</th>
+                                                <th>Status</th>
+                                                <th>Completed</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="onboarding-steps-table">
+                                            <!-- Onboarding steps will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-life-ring me-2"></i>Support Tickets</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Title</th>
+                                                <th>Organization</th>
+                                                <th>Priority</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="support-tickets-table">
+                                            <!-- Support tickets will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature Testing Section -->
+            <div class="content-section" id="testing-section">
+                <div class="row g-4">
+                    <!-- Chat Testing -->
+                    <div class="col-lg-6">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-comments me-2"></i>Chat Testing</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chat-testing">
+                                    <div class="chat-messages" id="test-chat-messages">
+                                        <div class="message ai">
+                                            <div class="message-avatar">
+                                                <i class="fas fa-robot"></i>
+                                            </div>
+                                            <div class="message-content">
+                                                <p>Hello! I'm your AI assistant. How can I help you today?</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="chat-input">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="test-message-input" placeholder="Type your message...">
+                                            <button class="btn btn-primary" onclick="sendTestMessage()">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Voice Testing -->
+                    <div class="col-lg-6">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-phone me-2"></i>Voice Testing</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="voice-testing">
+                                    <div class="voice-controls text-center">
+                                        <button class="btn btn-success btn-lg" onclick="startVoiceTest()">
+                                            <i class="fas fa-microphone"></i> Start Recording
+                                        </button>
+                                        <button class="btn btn-danger btn-lg" onclick="stopVoiceTest()" style="display: none;">
+                                            <i class="fas fa-stop"></i> Stop Recording
+                                        </button>
+                                    </div>
+                                    <div class="voice-status mt-3 text-center">
+                                        <p id="voice-status">Ready to record</p>
+                                    </div>
+                                    <div class="voice-result mt-3" id="voice-result" style="display: none;">
+                                        <h6>Transcription Result:</h6>
+                                        <p id="transcription-text"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- API Testing -->
+                    <div class="col-12">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-code me-2"></i>API Testing</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="api-testing">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="api-test-item">
+                                                <h6><i class="fas fa-comments me-2"></i>Chat API</h6>
+                                                <button class="btn btn-primary btn-sm" onclick="testChatAPI()">
+                                                    Test Chat Endpoint
+                                                </button>
+                                                <div class="api-result mt-2" id="chat-api-result"></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="api-test-item">
+                                                <h6><i class="fas fa-phone me-2"></i>Voice API</h6>
+                                                <button class="btn btn-success btn-sm" onclick="testVoiceAPI()">
+                                                    Test Voice Endpoint
+                                                </button>
+                                                <div class="api-result mt-2" id="voice-api-result"></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="api-test-item">
+                                                <h6><i class="fab fa-facebook me-2"></i>Social Media API</h6>
+                                                <button class="btn btn-info btn-sm" onclick="testSocialAPI()">
+                                                    Test Social Endpoint
+                                                </button>
+                                                <div class="api-result mt-2" id="social-api-result"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Section -->
+            <div class="content-section" id="analytics-section">
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-chart-bar me-2"></i>Usage Statistics</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="usageChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-chart-pie me-2"></i>Feature Usage</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="featureChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div class="content-section" id="settings-section">
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-cog me-2"></i>System Settings</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="settingsForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Site Name</label>
+                                        <input type="text" class="form-control" value="BanglaChatPro">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Default Language</label>
+                                        <select class="form-select">
+                                            <option value="en">English</option>
+                                            <option value="bn">Bangla</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Max Users per Organization</label>
+                                        <input type="number" class="form-control" value="100">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="admin-card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-shield-alt me-2"></i>Security Settings</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="enable2FA" checked>
+                                    <label class="form-check-label" for="enable2FA">
+                                        Enable Two-Factor Authentication
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="enableSSL" checked>
+                                    <label class="form-check-label" for="enableSSL">
+                                        Force SSL/HTTPS
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="enableLogging" checked>
+                                    <label class="form-check-label" for="enableLogging">
+                                        Enable Activity Logging
+                                    </label>
+                                </div>
+                                <button class="btn btn-warning">Reset Security Settings</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div class="modal fade" id="addOrganizationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Organization</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addOrganizationForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Organization Name</label>
+                            <input type="text" class="form-control" name="name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Contact Email</label>
+                            <input type="email" class="form-control" name="contact_email" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Subscription Plan</label>
+                            <select class="form-select" name="subscription_plan">
+                                <option value="free">Free</option>
+                                <option value="basic">Basic</option>
+                                <option value="premium">Premium</option>
+                                <option value="enterprise">Enterprise</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Max Users</label>
+                            <input type="number" class="form-control" name="max_users" value="10">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addOrganization()">Add Organization</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Admin Dashboard Styles */
+.admin-wrapper {
+    display: flex;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Sidebar Styles */
+.admin-sidebar {
+    width: 280px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    position: fixed;
+    height: 100vh;
+    z-index: 1000;
+}
+
+.sidebar-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sidebar-logo {
+    display: flex;
+    align-items: center;
+    color: white;
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.sidebar-logo i {
+    font-size: 1.5rem;
+    margin-right: 0.75rem;
+    color: #ffd700;
+}
+
+.sidebar-toggle {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+}
+
+.sidebar-menu {
+    flex: 1;
+    padding: 1rem 0;
+    overflow-y: auto;
+}
+
+.sidebar-menu .nav-link {
+    color: rgba(255, 255, 255, 0.8);
+    padding: 0.75rem 1.5rem;
+    border: none;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.sidebar-menu .nav-link:hover,
+.sidebar-menu .nav-link.active {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-menu .nav-link i {
+    width: 20px;
+    margin-right: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.sidebar-menu .nav-link .badge {
+    margin-left: auto;
+    font-size: 0.7rem;
+}
+
+.sidebar-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    color: white;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+}
+
+.user-name {
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.user-role {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+/* Main Content Styles */
+.admin-main {
+    flex: 1;
+    margin-left: 280px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.admin-header {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 1rem 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-toggle-mobile {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    margin-right: 1rem;
+}
+
+.page-title {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.admin-content {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+.content-section {
+    display: none;
+}
+
+.content-section.active {
+    display: block;
+}
+
+/* Card Styles */
+.admin-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.admin-card .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.admin-card .card-body {
+    padding: 1.5rem;
+}
+
+/* Statistics Cards */
+.stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+    display: flex;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.stat-primary .stat-icon { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.stat-success .stat-icon { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+.stat-warning .stat-icon { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+.stat-info .stat-icon { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+
+.stat-content h3 {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0;
+    color: #333;
+}
+
+.stat-content p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.stat-content small {
+    font-size: 0.8rem;
+}
+
+/* Approval Items */
+.approval-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.approval-item:hover {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.approval-info {
+    display: flex;
+    align-items: center;
+}
+
+.approval-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    color: white;
+    font-size: 1.25rem;
+}
+
+.approval-details h6 {
+    margin: 0;
+    font-weight: bold;
+    color: #333;
+}
+
+.approval-details p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.approval-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Status Items */
+.status-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 1rem;
+}
+
+.status-indicator.online {
+    background: #28a745;
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+}
+
+.status-info h6 {
+    margin: 0;
+    font-weight: bold;
+    color: #333;
+}
+
+.status-info span {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Chat Testing */
+.chat-testing {
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 1rem;
+    background: #f8f9fa;
+    margin-bottom: 1rem;
+}
+
+.message {
+    display: flex;
+    margin-bottom: 1rem;
+    max-width: 80%;
+}
+
+.message.ai {
+    margin-right: auto;
+}
+
+.message.user {
+    margin-left: auto;
+    flex-direction: row-reverse;
+}
+
+.message-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 0.5rem;
+    font-size: 0.9rem;
+}
+
+.message.ai .message-avatar {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.message.user .message-avatar {
+    background: #667eea;
+    color: white;
+}
+
+.message-content {
+    background: white;
+    padding: 0.75rem 1rem;
+    border-radius: 15px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.message.user .message-content {
+    background: #667eea;
+    color: white;
+}
+
+/* Voice Testing */
+.voice-testing {
+    text-align: center;
+    padding: 2rem;
+}
+
+.voice-controls {
+    margin-bottom: 2rem;
+}
+
+/* API Testing */
+.api-test-item {
+    text-align: center;
+    padding: 1.5rem;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.api-test-item:hover {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.api-result {
+    font-size: 0.8rem;
+    padding: 0.5rem;
+    border-radius: 5px;
+    min-height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.api-result.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.api-result.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Mobile Responsive */
+@media (max-width: 991.98px) {
+    .admin-sidebar {
+        transform: translateX(-100%);
+        position: fixed;
+        z-index: 1050;
+    }
+    
+    .admin-sidebar.show {
+        transform: translateX(0);
+    }
+    
+    .admin-main {
+        margin-left: 0;
+    }
+    
+    .admin-content {
+        padding: 1rem;
+    }
+    
+    .stat-card {
+        margin-bottom: 1rem;
+    }
+    
+    .approval-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .approval-actions {
+        margin-top: 1rem;
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .admin-header {
+        padding: 1rem;
+    }
+    
+    .page-title {
+        font-size: 1.25rem;
+    }
+    
+    .stat-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .stat-icon {
+        margin-right: 0;
+        margin-bottom: 1rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+    
+    .chat-testing {
+        height: 300px;
+    }
+    
+    .voice-testing {
+        padding: 1rem;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .admin-card {
+        background: rgba(30, 30, 30, 0.95);
+        color: white;
+    }
+    
+    .stat-card {
+        background: rgba(30, 30, 30, 0.95);
+        color: white;
+    }
+    
+    .stat-content h3 {
+        color: white;
+    }
+    
+    .stat-content p {
+        color: #ccc;
+    }
+    
+    .approval-item {
+        background: rgba(40, 40, 40, 0.8);
+        border-color: #555;
+    }
+    
+    .approval-details h6 {
+        color: white;
+    }
+    
+    .approval-details p {
+        color: #ccc;
+    }
+    
+    .status-item {
+        background: rgba(40, 40, 40, 0.8);
+    }
+    
+    .status-info h6 {
+        color: white;
+    }
+    
+    .status-info span {
+        color: #ccc;
+    }
+    
+    .chat-messages {
+        background: rgba(40, 40, 40, 0.8);
+    }
+    
+    .message-content {
+        background: rgba(50, 50, 50, 0.9);
+        color: white;
+    }
+    
+    .api-test-item {
+        background: rgba(40, 40, 40, 0.8);
+        border-color: #555;
+    }
+}
+</style>
+
+<script>
+// Global variables
+let currentSection = 'dashboard';
+let organizations = [];
+let users = [];
+let conversations = [];
+let aiAgents = [];
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    initializeSidebar();
+    loadDashboardData();
+    loadOrganizations();
+    loadUsers();
+    loadConversations();
+    loadAIAgents();
+    
+    // Set up section switching
+    document.querySelectorAll('[data-section]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const section = this.getAttribute('data-section');
+            switchSection(section);
+        });
+    });
+    
+    // Mobile sidebar toggle
+    document.getElementById('sidebarToggleMobile').addEventListener('click', function() {
+        document.getElementById('adminSidebar').classList.toggle('show');
+    });
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(e) {
+        if (window.innerWidth <= 991.98) {
+            const sidebar = document.getElementById('adminSidebar');
+            const toggle = document.getElementById('sidebarToggleMobile');
+            if (!sidebar.contains(e.target) && !toggle.contains(e.target)) {
+                sidebar.classList.remove('show');
+            }
+        }
+    });
+});
+
+// Initialize sidebar
+function initializeSidebar() {
+    // Set active section
+    const activeLink = document.querySelector(`[data-section="${currentSection}"]`);
+    if (activeLink) {
+        document.querySelectorAll('.sidebar-menu .nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        activeLink.classList.add('active');
+    }
+}
+
+// Switch section
+function switchSection(section) {
+    // Hide all sections
+    document.querySelectorAll('.content-section').forEach(sec => {
+        sec.classList.remove('active');
+    });
+    
+    // Show selected section
+    const targetSection = document.getElementById(`${section}-section`);
+    if (targetSection) {
+        targetSection.classList.add('active');
+    }
+    
+    // Update active link
+    document.querySelectorAll('.sidebar-menu .nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    
+    const activeLink = document.querySelector(`[data-section="${section}"]`);
+    if (activeLink) {
+        activeLink.classList.add('active');
+    }
+    
+    // Update page title
+    const pageTitle = document.getElementById('pageTitle');
+    const titles = {
+        'dashboard': 'Dashboard',
+        'organizations': 'Organizations',
+        'users': 'Users',
+        'chat': 'Chat Management',
+        'voice': 'Voice Management',
+        'social': 'Social Media',
+        'onboarding': 'Onboarding',
+        'testing': 'Feature Testing',
+        'analytics': 'Analytics',
+        'settings': 'Settings'
+    };
+    
+    if (pageTitle && titles[section]) {
+        pageTitle.textContent = titles[section];
+    }
+    
+    currentSection = section;
+    
+    // Load section-specific data
+    loadSectionData(section);
+    
+    // Close mobile sidebar
+    if (window.innerWidth <= 991.98) {
+        document.getElementById('adminSidebar').classList.remove('show');
+    }
+}
+
+// Load section-specific data
+function loadSectionData(section) {
+    switch(section) {
+        case 'voice':
+            loadVoiceData();
+            break;
+        case 'social':
+            loadSocialData();
+            break;
+        case 'onboarding':
+            loadOnboardingData();
+            break;
+        case 'analytics':
+            loadAnalyticsData();
+            break;
+    }
+}
+
+// Load dashboard data
+async function loadDashboardData() {
+    try {
+        const response = await fetch('/admin/api/dashboard-data/');
+        const data = await response.json();
+        
+        document.getElementById('total-organizations').textContent = data.total_organizations;
+        document.getElementById('total-users').textContent = data.total_users;
+        document.getElementById('pending-approvals').textContent = data.pending_approvals;
+        document.getElementById('total-conversations').textContent = data.total_conversations;
+        
+        // Update pending count in sidebar
+        const pendingCount = document.getElementById('pending-count');
+        if (pendingCount) {
+            pendingCount.textContent = data.pending_approvals;
+            pendingCount.style.display = data.pending_approvals > 0 ? 'inline-block' : 'none';
+        }
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
+}
+
+// Load organizations
+async function loadOrganizations() {
+    try {
+        const response = await fetch('/admin/api/organizations/');
+        organizations = await response.json();
+        renderOrganizationsTable();
+    } catch (error) {
+        console.error('Error loading organizations:', error);
+    }
+}
+
+// Render organizations table
+function renderOrganizationsTable() {
+    const tbody = document.getElementById('organizations-table');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    organizations.forEach(org => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <div class="d-flex align-items-center">
+                    <div class="org-avatar me-3">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">${org.name}</h6>
+                        <small class="text-muted">${org.description || 'No description'}</small>
+                    </div>
+                </div>
+            </td>
+            <td><span class="badge bg-${org.is_active ? 'success' : 'danger'}">${org.is_active ? 'Active' : 'Inactive'}</span></td>
+            <td><span class="badge bg-primary">${org.subscription_plan}</span></td>
+            <td>${org.user_count || 0}</td>
+            <td>${new Date(org.created_at).toLocaleDateString()}</td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="editOrganization(${org.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="deleteOrganization(${org.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Load users
+async function loadUsers() {
+    try {
+        const response = await fetch('/admin/api/users/');
+        users = await response.json();
+        renderUsersTable();
+    } catch (error) {
+        console.error('Error loading users:', error);
+    }
+}
+
+// Render users table
+function renderUsersTable() {
+    const tbody = document.getElementById('users-table');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    users.forEach(user => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <div class="d-flex align-items-center">
+                    <div class="user-avatar me-3">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">${user.username}</h6>
+                        <small class="text-muted">${user.first_name} ${user.last_name}</small>
+                    </div>
+                </div>
+            </td>
+            <td>${user.email}</td>
+            <td>${user.organization ? user.organization.name : 'N/A'}</td>
+            <td><span class="badge bg-${user.is_active ? 'success' : 'danger'}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
+            <td>${user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}</td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="editUser(${user.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="deleteUser(${user.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Load conversations
+async function loadConversations() {
+    try {
+        const response = await fetch('/admin/api/conversations/');
+        conversations = await response.json();
+        renderConversationsTable();
+    } catch (error) {
+        console.error('Error loading conversations:', error);
+    }
+}
+
+// Render conversations table
+function renderConversationsTable() {
+    const tbody = document.getElementById('conversations-table');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    conversations.slice(0, 10).forEach(conv => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${conv.user.username}</td>
+            <td>${conv.organization ? conv.organization.name : 'N/A'}</td>
+            <td><span class="badge bg-${conv.status === 'active' ? 'success' : 'secondary'}">${conv.status}</span></td>
+            <td>${conv.message_count || 0}</td>
+            <td>
+                <button class="btn btn-outline-primary btn-sm" onclick="viewConversation(${conv.id})">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Load AI agents
+async function loadAIAgents() {
+    try {
+        const response = await fetch('/admin/api/ai-agents/');
+        aiAgents = await response.json();
+        renderAIAgentsTable();
+    } catch (error) {
+        console.error('Error loading AI agents:', error);
+    }
+}
+
+// Render AI agents table
+function renderAIAgentsTable() {
+    const tbody = document.getElementById('ai-agents-table');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    aiAgents.forEach(agent => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${agent.name}</td>
+            <td>${agent.organization ? agent.organization.name : 'N/A'}</td>
+            <td><span class="badge bg-${agent.status === 'active' ? 'success' : 'secondary'}">${agent.status}</span></td>
+            <td>${agent.model_name}</td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="editAIAgent(${agent.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="deleteAIAgent(${agent.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Organization management functions
+function showAddOrganizationModal() {
+    const modal = new bootstrap.Modal(document.getElementById('addOrganizationModal'));
+    modal.show();
+}
+
+async function addOrganization() {
+    const form = document.getElementById('addOrganizationForm');
+    const formData = new FormData(form);
+    
+    try {
+        const response = await fetch('/admin/api/organizations/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+        
+        if (response.ok) {
+            loadOrganizations();
+            loadDashboardData();
+            bootstrap.Modal.getInstance(document.getElementById('addOrganizationModal')).hide();
+            form.reset();
+            showNotification('Organization added successfully!', 'success');
+        }
+    } catch (error) {
+        console.error('Error adding organization:', error);
+        showNotification('Error adding organization', 'error');
+    }
+}
+
+// Approval functions
+async function approveOrganization(orgId) {
+    if (confirm('Are you sure you want to approve this organization?')) {
+        try {
+            const response = await fetch(`/admin/api/approve-organization/${orgId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            if (response.ok) {
+                loadDashboardData();
+                loadOrganizations();
+                showNotification('Organization approved successfully!', 'success');
+            }
+        } catch (error) {
+            console.error('Error approving organization:', error);
+            showNotification('Error approving organization', 'error');
+        }
+    }
+}
+
+async function rejectOrganization(orgId) {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (reason) {
+        try {
+            const response = await fetch(`/admin/api/reject-organization/${orgId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({reason: reason})
+            });
+            
+            if (response.ok) {
+                loadDashboardData();
+                loadOrganizations();
+                showNotification('Organization rejected successfully!', 'success');
+            }
+        } catch (error) {
+            console.error('Error rejecting organization:', error);
+            showNotification('Error rejecting organization', 'error');
+        }
+    }
+}
+
+// Feature testing functions
+async function sendTestMessage() {
+    const input = document.getElementById('test-message-input');
+    const message = input.value.trim();
+    
+    if (!message) return;
+    
+    // Add user message to chat
+    const messagesDiv = document.getElementById('test-chat-messages');
+    const userMessage = document.createElement('div');
+    userMessage.className = 'message user';
+    userMessage.innerHTML = `
+        <div class="message-avatar">
+            <i class="fas fa-user"></i>
+        </div>
+        <div class="message-content">
+            <p>${message}</p>
+        </div>
+    `;
+    messagesDiv.appendChild(userMessage);
+    
+    input.value = '';
+    
+    // Send to API
+    try {
+        const response = await fetch('/api/chat/send/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                content: message,
+                conversation_id: null
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.ai_message) {
+            const aiMessage = document.createElement('div');
+            aiMessage.className = 'message ai';
+            aiMessage.innerHTML = `
+                <div class="message-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message-content">
+                    <p>${data.ai_message.content}</p>
+                </div>
+            `;
+            messagesDiv.appendChild(aiMessage);
+        }
+        
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    } catch (error) {
+        console.error('Error sending test message:', error);
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'message ai';
+        errorMessage.innerHTML = `
+            <div class="message-avatar">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="message-content">
+                <p>Error: Could not send message</p>
+            </div>
+        `;
+        messagesDiv.appendChild(errorMessage);
+    }
+}
+
+// API testing functions
+async function testChatAPI() {
+    const resultDiv = document.getElementById('chat-api-result');
+    resultDiv.innerHTML = 'Testing...';
+    
+    try {
+        const response = await fetch('/api/chat/send/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                content: 'Test message',
+                conversation_id: null
+            })
+        });
+        
+        if (response.ok) {
+            resultDiv.innerHTML = '✅ Chat API working';
+            resultDiv.className = 'api-result success';
+        } else {
+            resultDiv.innerHTML = `❌ Chat API error: ${response.status}`;
+            resultDiv.className = 'api-result error';
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `❌ Chat API error: ${error.message}`;
+        resultDiv.className = 'api-result error';
+    }
+}
+
+async function testVoiceAPI() {
+    const resultDiv = document.getElementById('voice-api-result');
+    resultDiv.innerHTML = 'Testing...';
+    
+    try {
+        const response = await fetch('/voice/api/make-call/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                phone_number: '+1234567890',
+                voice_type: 'alloy'
+            })
+        });
+        
+        if (response.ok) {
+            resultDiv.innerHTML = '✅ Voice API working';
+            resultDiv.className = 'api-result success';
+        } else {
+            resultDiv.innerHTML = `❌ Voice API error: ${response.status}`;
+            resultDiv.className = 'api-result error';
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `❌ Voice API error: ${error.message}`;
+        resultDiv.className = 'api-result error';
+    }
+}
+
+async function testSocialAPI() {
+    const resultDiv = document.getElementById('social-api-result');
+    resultDiv.innerHTML = 'Testing...';
+    
+    try {
+        const response = await fetch('/social/api/accounts/', {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+        
+        if (response.ok) {
+            resultDiv.innerHTML = '✅ Social API working';
+            resultDiv.className = 'api-result success';
+        } else {
+            resultDiv.innerHTML = `❌ Social API error: ${response.status}`;
+            resultDiv.className = 'api-result error';
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `❌ Social API error: ${error.message}`;
+        resultDiv.className = 'api-result error';
+    }
+}
+
+// Utility functions
+function refreshData() {
+    loadDashboardData();
+    loadOrganizations();
+    loadUsers();
+    loadConversations();
+    loadAIAgents();
+    showNotification('Data refreshed!', 'success');
+}
+
+function refreshApprovals() {
+    loadDashboardData();
+    showNotification('Approvals refreshed!', 'success');
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 5000);
+}
+
+// Placeholder functions for other features
+function loadVoiceData() {
+    // Load voice data
+}
+
+function loadSocialData() {
+    // Load social media data
+}
+
+function loadOnboardingData() {
+    // Load onboarding data
+}
+
+function loadAnalyticsData() {
+    // Load analytics data
+}
+
+// Event listeners
+document.getElementById('test-message-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        sendTestMessage();
+    }
+});
+
+// Handle window resize
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 991.98) {
+        document.getElementById('adminSidebar').classList.remove('show');
+    }
+});
+</script>
+{% endblock %}
