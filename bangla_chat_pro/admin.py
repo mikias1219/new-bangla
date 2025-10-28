@@ -4,11 +4,15 @@ from django.utils.html import format_html
 from django.urls import path, reverse
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.db.models import Count, Avg
+from django.db.models import Count, Avg, Q
 from django.utils import timezone
 from datetime import timedelta
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+import json
 
-from accounts.models import Organization, User, APIKey
+from accounts.models import Organization, User, APIKey, Subscription, Payment
 from chat.models import Conversation, Message, AIAgent
 from voice.models import VoiceSession, VoiceRecording
 from social_media.models import SocialMediaAccount, SocialMediaMessage
@@ -28,6 +32,9 @@ class BanglaChatProAdminSite(AdminSite):
             path('analytics/', self.admin_view(self.analytics_view), name='analytics'),
             path('client-management/', self.admin_view(self.client_management_view), name='client_management'),
             path('system-health/', self.admin_view(self.system_health_view), name='system_health'),
+            path('super-admin/', self.admin_view(self.super_admin_dashboard), name='super_admin'),
+            path('api/approve-organization/<int:org_id>/', self.admin_view(self.approve_organization_api), name='approve_organization'),
+            path('api/reject-organization/<int:org_id>/', self.admin_view(self.reject_organization_api), name='reject_organization'),
         ]
         return custom_urls + urls
 
@@ -96,6 +103,70 @@ class BanglaChatProAdminSite(AdminSite):
         }
         return render(request, 'admin/system_health.html', context)
 
+    def super_admin_dashboard(self, request):
+        """Super admin dashboard view"""
+        # Get statistics
+        total_organizations = Organization.objects.count()
+        pending_approvals = Organization.objects.filter(approval_status='pending').count()
+        total_users = User.objects.count()
+        total_conversations = Conversation.objects.count()
+        
+        # Get pending organizations
+        pending_organizations = Organization.objects.filter(approval_status='pending').order_by('-created_at')[:10]
+        
+        # Get recent activities (you can expand this)
+        recent_activities = []
+        
+        context = {
+            'title': 'Super Admin Dashboard',
+            'total_organizations': total_organizations,
+            'pending_approvals': pending_approvals,
+            'total_users': total_users,
+            'total_conversations': total_conversations,
+            'pending_organizations': pending_organizations,
+            'recent_activities': recent_activities,
+        }
+        
+        return render(request, 'admin/super_admin_dashboard.html', context)
+
+    @method_decorator(csrf_exempt)
+    def approve_organization_api(self, request, org_id):
+        """API endpoint to approve organization"""
+        try:
+            organization = Organization.objects.get(id=org_id)
+            organization.approval_status = 'approved'
+            organization.approved_by = request.user
+            organization.approved_at = timezone.now()
+            organization.is_active = True
+            organization.save()
+            
+            return JsonResponse({'success': True, 'message': 'Organization approved successfully'})
+        except Organization.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Organization not found'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    @method_decorator(csrf_exempt)
+    def reject_organization_api(self, request, org_id):
+        """API endpoint to reject organization"""
+        try:
+            data = json.loads(request.body)
+            reason = data.get('reason', '')
+            
+            organization = Organization.objects.get(id=org_id)
+            organization.approval_status = 'rejected'
+            organization.approved_by = request.user
+            organization.approved_at = timezone.now()
+            organization.rejection_reason = reason
+            organization.is_active = False
+            organization.save()
+            
+            return JsonResponse({'success': True, 'message': 'Organization rejected successfully'})
+        except Organization.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Organization not found'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
     def index(self, request, extra_context=None):
         """Custom index page"""
         extra_context = extra_context or {}
@@ -104,6 +175,7 @@ class BanglaChatProAdminSite(AdminSite):
             'analytics_url': reverse('admin:analytics'),
             'client_management_url': reverse('admin:client_management'),
             'system_health_url': reverse('admin:system_health'),
+            'super_admin_url': reverse('admin:super_admin'),
         })
         return super().index(request, extra_context)
 

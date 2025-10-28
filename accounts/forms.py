@@ -7,10 +7,11 @@ class UserRegistrationForm(UserCreationForm):
 
     email = forms.EmailField(required=True)
     phone = forms.CharField(max_length=15, required=False, help_text="Optional phone number")
+    organization_name = forms.CharField(max_length=255, required=False, help_text="Your organization name (optional)")
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name', 'phone', 'password1', 'password2')
+        fields = ('username', 'email', 'first_name', 'last_name', 'phone', 'organization_name', 'password1', 'password2')
 
     def save(self, commit=True):
         user = super().save(commit=False)

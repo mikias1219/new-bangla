@@ -7,11 +7,11 @@ from .models import (
 
 @admin.register(SocialMediaAccount)
 class SocialMediaAccountAdmin(admin.ModelAdmin):
-    list_display = ['platform', 'account_name', 'organization', 'is_active', 'connected_at']
-    list_filter = ['platform', 'is_active', 'connected_at']
+    list_display = ['platform', 'account_name', 'organization', 'is_active', 'created_at']
+    list_filter = ['platform', 'is_active', 'created_at']
     search_fields = ['account_name', 'organization__name', 'platform']
-    readonly_fields = ['connected_at', 'last_sync_at']
-    ordering = ['-connected_at']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['-created_at']
     
     fieldsets = (
         ('Account Information', {
@@ -25,7 +25,7 @@ class SocialMediaAccountAdmin(admin.ModelAdmin):
             'fields': ('webhook_url', 'auto_reply_enabled', 'response_delay')
         }),
         ('Timestamps', {
-            'fields': ('connected_at', 'last_sync_at'),
+            'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
@@ -33,10 +33,10 @@ class SocialMediaAccountAdmin(admin.ModelAdmin):
 
 @admin.register(SocialMediaMessage)
 class SocialMediaMessageAdmin(admin.ModelAdmin):
-    list_display = ['social_account', 'sender_id', 'message_type', 'is_ai_response', 'received_at']
-    list_filter = ['message_type', 'is_ai_response', 'received_at', 'social_account__platform']
+    list_display = ['social_account', 'sender_id', 'message_type', 'ai_processed', 'received_at']
+    list_filter = ['message_type', 'ai_processed', 'received_at', 'social_account__platform']
     search_fields = ['content', 'sender_id', 'social_account__account_name']
-    readonly_fields = ['received_at', 'sent_at']
+    readonly_fields = ['received_at', 'processed_at', 'sent_at']
     ordering = ['-received_at']
     
     fieldsets = (
@@ -44,10 +44,10 @@ class SocialMediaMessageAdmin(admin.ModelAdmin):
             'fields': ('social_account', 'sender_id', 'message_type', 'content')
         }),
         ('Response Details', {
-            'fields': ('is_ai_response', 'ai_agent', 'response_time')
+            'fields': ('ai_processed', 'ai_response', 'ai_confidence')
         }),
         ('Timestamps', {
-            'fields': ('received_at', 'sent_at'),
+            'fields': ('received_at', 'processed_at', 'sent_at'),
             'classes': ('collapse',)
         }),
     )
@@ -77,21 +77,25 @@ class SocialMediaAutoReplyAdmin(admin.ModelAdmin):
 
 @admin.register(SocialMediaWebhook)
 class SocialMediaWebhookAdmin(admin.ModelAdmin):
-    list_display = ['platform', 'organization', 'is_active', 'created_at']
-    list_filter = ['platform', 'is_active', 'created_at']
-    search_fields = ['webhook_url', 'organization__name']
-    readonly_fields = ['created_at', 'updated_at']
+    list_display = ['social_account', 'event_type', 'processed', 'created_at']
+    list_filter = ['event_type', 'processed', 'created_at']
+    search_fields = ['event_id', 'social_account__account_name']
+    readonly_fields = ['created_at']
     ordering = ['-created_at']
     
     fieldsets = (
-        ('Webhook Configuration', {
-            'fields': ('platform', 'organization', 'webhook_url', 'is_active')
+        ('Webhook Information', {
+            'fields': ('social_account', 'event_type', 'event_id')
         }),
-        ('Security', {
-            'fields': ('secret_key', 'verify_token')
+        ('Processing', {
+            'fields': ('processed', 'processed_at', 'error_message')
         }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
+        ('Raw Data', {
+            'fields': ('raw_payload',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamp', {
+            'fields': ('created_at',),
             'classes': ('collapse',)
         }),
     )
@@ -102,7 +106,7 @@ class SocialMediaAnalyticsAdmin(admin.ModelAdmin):
     list_display = ['social_account', 'date', 'messages_received', 'messages_sent', 'ai_responses']
     list_filter = ['date', 'social_account__platform']
     search_fields = ['social_account__account_name', 'social_account__organization__name']
-    readonly_fields = ['created_at']
+    readonly_fields = ['date', 'period']
     ordering = ['-date']
     
     fieldsets = (

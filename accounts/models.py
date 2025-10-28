@@ -44,6 +44,18 @@ class Organization(models.Model):
     subscription_start = models.DateTimeField(null=True, blank=True)
     subscription_end = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    
+    # Approval system
+    approval_status = models.CharField(max_length=20, choices=[
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('suspended', 'Suspended'),
+    ], default='pending')
+    
+    approved_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_organizations')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
 
     # Contact information
     contact_email = models.EmailField(blank=True)

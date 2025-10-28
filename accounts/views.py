@@ -33,7 +33,7 @@ def logout_view(request):
     return redirect('accounts:login')
 
 def register_view(request):
-    """User registration view"""
+    """User registration view with organization approval"""
     if request.user.is_authenticated:
         return redirect('dashboard:home')
 
@@ -41,8 +41,24 @@ def register_view(request):
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
+            
+            # Create organization if provided
+            org_name = request.POST.get('organization_name')
+            if org_name:
+                organization = Organization.objects.create(
+                    name=org_name,
+                    contact_email=user.email,
+                    contact_phone=user.phone,
+                    approval_status='pending'
+                )
+                user.organization = organization
+                user.save()
+                
+                messages.success(request, 'Registration successful! Your organization is pending admin approval. You will receive an email once approved.')
+            else:
+                messages.success(request, 'Registration successful! Welcome to BanglaChatPro.')
+            
             login(request, user)
-            messages.success(request, 'Registration successful! Welcome to BanglaChatPro.')
             return redirect('dashboard:home')
         # If form is invalid, it will fall through to the render below with errors
     else:
