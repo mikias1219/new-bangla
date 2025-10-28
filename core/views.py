@@ -12,6 +12,11 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 import json
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
+
 from core.models import Client, BanglaConversation, CallLog, BanglaIntent, AdminProfile, SystemSettings, Analytics
 from accounts.models import User, Organization, APIKey
 from chat.models import Conversation, Message, AIAgent, Intent, Feedback
@@ -400,3 +405,59 @@ def admin_api_test_voice(request):
         })
     
     return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+# DRF API Views for Admin Testing
+class AdminTestChatAPIView(APIView):
+    """Test chat functionality from admin dashboard"""
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Access denied'}, status=403)
+        
+        message = request.data.get('message', 'Hello')
+        client_id = request.data.get('client_id', 1)
+        
+        try:
+            client = Client.objects.get(id=client_id)
+        except Client.DoesNotExist:
+            return Response({'error': 'Client not found'}, status=404)
+        
+        # Test AI response
+        ai_result = openai_service.generate_chat_response(
+            message=message,
+            system_prompt=f"Test message for {client.name}. Respond in Bangla."
+        )
+        
+        return Response({
+            'message': message,
+            'ai_response': ai_result['response'],
+            'confidence': ai_result.get('confidence', 0.0),
+            'client': client.name
+        })
+
+
+class AdminTestVoiceAPIView(APIView):
+    """Test voice functionality from admin dashboard"""
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Access denied'}, status=403)
+        
+        text = request.data.get('text', 'Hello, this is a test.')
+        
+        # Test voice synthesis
+        audio_result = openai_service.generate_voice_response(
+            text=text,
+            voice="alloy",
+            model="tts-1"
+        )
+        
+        return Response({
+            'text': text,
+            'audio_url': audio_result.get('audio_url'),
+            'error': audio_result.get('error')
+        })
