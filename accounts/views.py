@@ -3,13 +3,52 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.forms import PasswordChangeForm
+from django.http import JsonResponse
+from django.db.models import Avg
+from django.utils import timezone
 from .models import User, Organization
 from .forms import UserRegistrationForm, UserProfileForm
+from core.models import Client, BanglaConversation, CallLog
+
+def public_dashboard_view(request):
+    """Public dashboard view showing platform statistics and features"""
+    # Get public statistics
+    stats = {
+        'total_users': User.objects.count(),
+        'total_conversations': BanglaConversation.objects.count(),
+        'total_voice_calls': CallLog.objects.count(),
+        'total_clients': Client.objects.filter(is_active=True).count(),
+        'active_conversations': BanglaConversation.objects.filter(status='active').count(),
+        'average_rating': BanglaConversation.objects.filter(satisfaction_rating__isnull=False).aggregate(
+            avg_rating=Avg('satisfaction_rating')
+        )['avg_rating'] or 0,
+    }
+    
+    # Recent activity (public)
+    recent_stats = {
+        'conversations_today': BanglaConversation.objects.filter(
+            created_at__date=timezone.now().date()
+        ).count(),
+        'voice_calls_today': CallLog.objects.filter(
+            timestamp__date=timezone.now().date()
+        ).count(),
+    }
+    
+    context = {
+        'stats': stats,
+        'recent_stats': recent_stats,
+        'is_public': True,
+    }
+    
+    return render(request, 'accounts/public_dashboard.html', context)
 
 def login_view(request):
     """User login view"""
     if request.user.is_authenticated:
-        return redirect('dashboard:home')
+        if request.user.is_superuser:
+            return redirect('bangla_admin_dashboard')
+        else:
+            return redirect('accounts:public_dashboard')
 
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -19,7 +58,10 @@ def login_view(request):
 
         if user is not None:
             login(request, user)
-            next_url = request.GET.get('next', 'dashboard:home')
+            if user.is_superuser:
+                next_url = request.GET.get('next', 'bangla_admin_dashboard')
+            else:
+                next_url = request.GET.get('next', 'accounts:public_dashboard')
             return redirect(next_url)
         else:
             messages.error(request, 'Invalid username or password.')
@@ -35,7 +77,7 @@ def logout_view(request):
 def register_view(request):
     """User registration view with organization approval"""
     if request.user.is_authenticated:
-        return redirect('dashboard:home')
+        return redirect('accounts:public_dashboard')
 
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)

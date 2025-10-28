@@ -13,6 +13,9 @@ urlpatterns = [
     # Django Admin (keep for superuser access)
     path('admin/', admin.site.urls),
     
+    # Public Dashboard
+    path('dashboard/', include('accounts.urls')),
+    
     # Main BanglaChatPro Chat Interface
     path('', include('chat.urls')),  # Main chat interface at root
     
@@ -21,9 +24,6 @@ urlpatterns = [
     
     # Admin Dashboard (Custom)
     path('admin-dashboard/', include('core.urls')),  # Custom admin dashboard
-    
-    # Account Management
-    path('accounts/', include('accounts.urls')),
     
     # Additional Features (if needed)
     path('voice/', include('voice.urls')),  # Voice features
