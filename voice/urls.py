@@ -19,4 +19,10 @@ urlpatterns = [
     # Manual call/SMS initiation
     path('call/initiate/', views.initiate_call, name='initiate_call'),
     path('sms/send/', views.send_sms, name='send_sms'),
+    
+    # API endpoints for voice call interface
+    path('api/make-call/', views.make_call_api, name='make_call_api'),
+    path('api/hangup-call/', views.hangup_call_api, name='hangup_call_api'),
+    path('api/call-log/', views.call_log_api, name='call_log_api'),
+    path('analytics/', views.voice_analytics, name='analytics'),
 ]

@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Client Onboarding - BanglaChatPro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h2 mb-1">Welcome to BanglaChatPro!</h1>
+            <p class="text-muted mb-0">Let's get your AI-powered customer service up and running</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'client_onboarding:quick_setup' %}" class="btn btn-outline-primary">
+                <i class="fas fa-rocket me-1"></i>Quick Setup
+            </a>
+            <a href="{% url 'client_onboarding:create_ticket' %}" class="btn btn-outline-info">
+                <i class="fas fa-question-circle me-1"></i>Get Help
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Overview -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="card modern-card">
+            <div class="card-header bg-gradient-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-tasks me-2"></i>Onboarding Progress
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Progress Bar -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-semibold">Overall Progress</span>
+                        <span class="badge bg-primary">{{ completed_steps }}/{{ total_steps }} Steps</span>
+                    </div>
+                    <div class="modern-progress">
+                        <div class="modern-progress-bar" style="width: {{ progress_percentage }}%"></div>
+                    </div>
+                    <small class="text-muted">{{ progress_percentage|floatformat:0 }}% Complete</small>
+                </div>
+
+                <!-- Steps Grid -->
+                <div class="row g-3">
+                    {% for step in steps %}
+                    <div class="col-md-6">
+                        <div class="step-card {% if step.is_completed %}completed{% endif %}">
+                            <div class="d-flex align-items-center">
+                                <div class="step-icon me-3">
+                                    {% if step.is_completed %}
+                                        <i class="fas fa-check-circle text-success"></i>
+                                    {% else %}
+                                        <i class="fas fa-circle text-muted"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ step.get_step_name_display }}</h6>
+                                    <small class="text-muted">
+                                        {% if step.is_completed %}
+                                            Completed {{ step.completed_at|timesince }} ago
+                                        {% else %}
+                                            Pending
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <div>
+                                    {% if step.is_completed %}
+                                        <span class="badge bg-success">Done</span>
+                                    {% else %}
+                                        <a href="{% url 'client_onboarding:step' step.step_name %}" class="btn btn-sm btn-outline-primary">
+                                            Start
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card modern-card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2 text-warning"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'client_onboarding:quick_setup' %}" class="btn btn-primary interactive-btn">
+                        <i class="fas fa-rocket me-2"></i>Quick Setup Wizard
+                    </a>
+                    <a href="{% url 'client_onboarding:setup_guide' 'openai' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-key me-2"></i>API Keys Guide
+                    </a>
+                    <a href="{% url 'client_onboarding:setup_guide' 'twilio' %}" class="btn btn-outline-success">
+                        <i class="fas fa-phone me-2"></i>Voice Setup
+                    </a>
+                    <a href="{% url 'client_onboarding:setup_guide' 'facebook' %}" class="btn btn-outline-info">
+                        <i class="fab fa-facebook me-2"></i>Social Media
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Support Tickets -->
+        <div class="card modern-card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-life-ring me-2 text-info"></i>Recent Support
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_tickets %}
+                    {% for ticket in recent_tickets %}
+                    <div class="ticket-item mb-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ ticket.title|truncatechars:30 }}</h6>
+                                <small class="text-muted">{{ ticket.created_at|timesince }} ago</small>
+                            </div>
+                            <span class="badge bg-{{ ticket.priority|default:'secondary' }}">
+                                {{ ticket.get_priority_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="text-center">
+                        <a href="{% url 'client_onboarding:support_tickets' %}" class="btn btn-sm btn-outline-primary">
+                            View All Tickets
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p>No support tickets yet</p>
+                        <a href="{% url 'client_onboarding:create_ticket' %}" class="btn btn-sm btn-outline-primary">
+                            Create Ticket
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Setup Guides -->
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card modern-card">
+            <div class="card-header bg-gradient-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-book me-2"></i>Setup Guides
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for guide in setup_guides %}
+                    <div class="col-md-4">
+                        <div class="guide-card">
+                            <div class="guide-icon bg-{{ guide.service_name|default:'primary' }}">
+                                <i class="fab fa-{{ guide.service_name }}"></i>
+                            </div>
+                            <h6 class="mb-2">{{ guide.title }}</h6>
+                            <p class="text-muted small mb-3">{{ guide.description|truncatechars:100 }}</p>
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'client_onboarding:setup_guide' guide.service_name %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-play me-1"></i>Start Guide
+                                </a>
+                                {% if guide.video_tutorial_url %}
+                                <a href="{{ guide.video_tutorial_url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-video me-1"></i>Video
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Completion Celebration -->
+{% if progress_percentage == 100 %}
+<div class="row g-4 mt-4">
+    <div class="col-12">
+        <div class="card modern-card bg-gradient-warning text-white">
+            <div class="card-body text-center">
+                <div class="floating">
+                    <i class="fas fa-trophy fa-3x mb-3"></i>
+                </div>
+                <h3 class="mb-3">🎉 Congratulations!</h3>
+                <p class="lead mb-4">You've completed the onboarding process! Your AI-powered customer service is ready to go.</p>
+                <div class="d-flex gap-3 justify-content-center">
+                    <a href="{% url 'chat:interface' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-comments me-2"></i>Start Chatting
+                    </a>
+                    <a href="{% url 'voice:interface' %}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-phone me-2"></i>Test Voice Calls
+                    </a>
+                    <a href="{% url 'social_media:accounts_list' %}" class="btn btn-outline-light btn-lg">
+                        <i class="fab fa-facebook me-2"></i>Social Media
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.step-card {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    padding: 1rem;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.step-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.step-card.completed {
+    border-color: #28a745;
+    background: rgba(40, 167, 69, 0.1);
+}
+
+.step-icon {
+    font-size: 1.2rem;
+}
+
+.guide-card {
+    text-align: center;
+    padding: 1.5rem;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.guide-card:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.guide-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.bg-openai { background: linear-gradient(135deg, #00a67e 0%, #00d4aa 100%); }
+.bg-twilio { background: linear-gradient(135deg, #f22f46 0%, #ff6b7a 100%); }
+.bg-facebook { background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%); }
+.bg-instagram { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+.bg-whatsapp { background: linear-gradient(135deg, #25d366 0%, #128c7e 100%); }
+.bg-twitter { background: linear-gradient(135deg, #1da1f2 0%, #0d8bd9 100%); }
+
+.ticket-item {
+    padding: 0.75rem;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.floating {
+    animation: floating 3s ease-in-out infinite;
+}
+
+@keyframes floating {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,495 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Voice Calls - BanglaChatPro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h2 mb-1">Voice Call Interface</h1>
+            <p class="text-muted mb-0">Make and receive AI-powered voice calls</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-info" id="testCall">
+                <i class="fas fa-phone me-1"></i>Test Call
+            </button>
+            <a href="{% url 'voice:analytics' %}" class="btn btn-outline-primary">
+                <i class="fas fa-chart-bar me-1"></i>Analytics
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <!-- Voice Call Interface -->
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-gradient-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-phone-alt me-2"></i>AI Voice Call Center
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <!-- Call Status -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="call-status-card">
+                            <div class="d-flex align-items-center">
+                                <div class="status-indicator bg-success"></div>
+                                <div class="ms-3">
+                                    <h6 class="mb-0">System Status</h6>
+                                    <small class="text-success">Online & Ready</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="call-status-card">
+                            <div class="d-flex align-items-center">
+                                <div class="status-indicator bg-primary"></div>
+                                <div class="ms-3">
+                                    <h6 class="mb-0">Active Calls</h6>
+                                    <small class="text-primary" id="activeCalls">0</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phone Number Input -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Enter Phone Number</label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text">
+                            <i class="fas fa-phone text-primary"></i>
+                        </span>
+                        <input type="tel" id="phoneNumber" class="form-control" 
+                               placeholder="+1234567890" maxlength="15">
+                        <button class="btn btn-primary" id="makeCallBtn">
+                            <i class="fas fa-phone me-2"></i>Make Call
+                        </button>
+                    </div>
+                    <small class="text-muted">Enter the phone number you want to call</small>
+                </div>
+
+                <!-- Call Controls -->
+                <div class="call-controls text-center mb-4">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-success btn-lg" id="answerBtn" disabled>
+                            <i class="fas fa-phone me-2"></i>Answer
+                        </button>
+                        <button type="button" class="btn btn-danger btn-lg" id="hangupBtn" disabled>
+                            <i class="fas fa-phone-slash me-2"></i>Hang Up
+                        </button>
+                        <button type="button" class="btn btn-warning btn-lg" id="muteBtn" disabled>
+                            <i class="fas fa-microphone-slash me-2"></i>Mute
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Call Log -->
+                <div class="call-log">
+                    <h6 class="mb-3">
+                        <i class="fas fa-history me-2"></i>Recent Calls
+                    </h6>
+                    <div id="callLogList" class="list-group">
+                        <!-- Call log items will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- AI Agent Configuration -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-robot me-2 text-primary"></i>AI Agent Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Voice Type</label>
+                    <select class="form-select" id="voiceType">
+                        <option value="alloy">Alloy (Neutral)</option>
+                        <option value="echo">Echo (Male)</option>
+                        <option value="fable">Fable (Male)</option>
+                        <option value="onyx">Onyx (Male)</option>
+                        <option value="nova">Nova (Female)</option>
+                        <option value="shimmer">Shimmer (Female)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Language</label>
+                    <select class="form-select" id="language">
+                        <option value="en">English</option>
+                        <option value="bn">Bengali</option>
+                        <option value="hi">Hindi</option>
+                        <option value="es">Spanish</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Response Speed</label>
+                    <input type="range" class="form-range" id="responseSpeed" min="1" max="5" value="3">
+                    <small class="text-muted">1 = Slow, 5 = Fast</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call Statistics -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2 text-success"></i>Call Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <div class="stat-number text-primary" id="totalCalls">0</div>
+                            <div class="stat-label">Total Calls</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <div class="stat-number text-success" id="successfulCalls">0</div>
+                            <div class="stat-label">Successful</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <div class="stat-number text-warning" id="avgDuration">0m</div>
+                            <div class="stat-label">Avg Duration</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <div class="stat-number text-info" id="satisfactionRate">0%</div>
+                            <div class="stat-label">Satisfaction</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2 text-warning"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="testIVR()">
+                        <i class="fas fa-microphone me-2"></i>Test IVR System
+                    </button>
+                    <button class="btn btn-outline-success" onclick="scheduleCall()">
+                        <i class="fas fa-calendar me-2"></i>Schedule Call
+                    </button>
+                    <button class="btn btn-outline-info" onclick="exportCallLog()">
+                        <i class="fas fa-download me-2"></i>Export Call Log
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="configureWebhook()">
+                        <i class="fas fa-cog me-2"></i>Configure Webhook
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.call-status-card {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    padding: 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.call-controls .btn {
+    margin: 0 0.5rem;
+    min-width: 120px;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.call-log .list-group-item {
+    border: none;
+    border-bottom: 1px solid #e9ecef;
+    padding: 0.75rem 0;
+}
+
+.call-log .list-group-item:last-child {
+    border-bottom: none;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentCall = null;
+let callStats = {
+    totalCalls: 0,
+    successfulCalls: 0,
+    avgDuration: 0,
+    satisfactionRate: 0
+};
+
+// DOM elements
+const phoneNumber = document.getElementById('phoneNumber');
+const makeCallBtn = document.getElementById('makeCallBtn');
+const answerBtn = document.getElementById('answerBtn');
+const hangupBtn = document.getElementById('hangupBtn');
+const muteBtn = document.getElementById('muteBtn');
+const callLogList = document.getElementById('callLogList');
+const activeCalls = document.getElementById('activeCalls');
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    loadCallLog();
+    updateStats();
+});
+
+// Make call function
+async function makeCall() {
+    const number = phoneNumber.value.trim();
+    if (!number) {
+        alert('Please enter a phone number');
+        return;
+    }
+
+    try {
+        makeCallBtn.disabled = true;
+        makeCallBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Calling...';
+
+        const response = await fetch('/api/voice/make-call/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken(),
+            },
+            body: JSON.stringify({
+                phone_number: number,
+                voice_type: document.getElementById('voiceType').value,
+                language: document.getElementById('language').value
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            currentCall = data.call_sid;
+            updateCallStatus('calling');
+            addToCallLog(number, 'outgoing', 'calling');
+        } else {
+            alert('Error making call: ' + data.error);
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    } finally {
+        makeCallBtn.disabled = false;
+        makeCallBtn.innerHTML = '<i class="fas fa-phone me-2"></i>Make Call';
+    }
+}
+
+// Answer call
+function answerCall() {
+    if (currentCall) {
+        updateCallStatus('answered');
+        answerBtn.disabled = true;
+        hangupBtn.disabled = false;
+        muteBtn.disabled = false;
+    }
+}
+
+// Hang up call
+async function hangupCall() {
+    if (currentCall) {
+        try {
+            await fetch('/api/voice/hangup-call/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                },
+                body: JSON.stringify({
+                    call_sid: currentCall
+                })
+            });
+
+            updateCallStatus('ended');
+            currentCall = null;
+            callStats.totalCalls++;
+            updateStats();
+        } catch (error) {
+            console.error('Error hanging up:', error);
+        }
+    }
+}
+
+// Update call status
+function updateCallStatus(status) {
+    const statusMap = {
+        'calling': { text: 'Calling...', class: 'text-warning' },
+        'answered': { text: 'Connected', class: 'text-success' },
+        'ended': { text: 'Call Ended', class: 'text-muted' }
+    };
+
+    const statusInfo = statusMap[status];
+    if (statusInfo) {
+        // Update UI based on status
+        if (status === 'calling') {
+            answerBtn.disabled = true;
+            hangupBtn.disabled = false;
+            muteBtn.disabled = true;
+        } else if (status === 'answered') {
+            answerBtn.disabled = true;
+            hangupBtn.disabled = false;
+            muteBtn.disabled = false;
+        } else if (status === 'ended') {
+            answerBtn.disabled = true;
+            hangupBtn.disabled = true;
+            muteBtn.disabled = true;
+        }
+    }
+}
+
+// Add to call log
+function addToCallLog(number, type, status) {
+    const logItem = document.createElement('div');
+    logItem.className = 'list-group-item';
+    
+    const icon = type === 'outgoing' ? 'fa-phone' : 'fa-phone-alt';
+    const typeText = type === 'outgoing' ? 'Outgoing' : 'Incoming';
+    
+    logItem.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas ${icon} me-2 text-primary"></i>
+                <strong>${number}</strong>
+                <small class="text-muted ms-2">${typeText}</small>
+            </div>
+            <div>
+                <span class="badge bg-${status === 'calling' ? 'warning' : 'success'}">${status}</span>
+                <small class="text-muted ms-2">${new Date().toLocaleTimeString()}</small>
+            </div>
+        </div>
+    `;
+    
+    callLogList.insertBefore(logItem, callLogList.firstChild);
+}
+
+// Load call log
+async function loadCallLog() {
+    try {
+        const response = await fetch('/api/voice/call-log/');
+        const data = await response.json();
+        
+        if (response.ok) {
+            callLogList.innerHTML = '';
+            data.calls.forEach(call => {
+                addToCallLog(call.number, call.type, call.status);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading call log:', error);
+    }
+}
+
+// Update statistics
+function updateStats() {
+    document.getElementById('totalCalls').textContent = callStats.totalCalls;
+    document.getElementById('successfulCalls').textContent = callStats.successfulCalls;
+    document.getElementById('avgDuration').textContent = callStats.avgDuration + 'm';
+    document.getElementById('satisfactionRate').textContent = callStats.satisfactionRate + '%';
+}
+
+// Quick action functions
+function testIVR() {
+    alert('IVR test functionality would be implemented here');
+}
+
+function scheduleCall() {
+    alert('Call scheduling functionality would be implemented here');
+}
+
+function exportCallLog() {
+    alert('Call log export functionality would be implemented here');
+}
+
+function configureWebhook() {
+    alert('Webhook configuration would be implemented here');
+}
+
+// Get CSRF token
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+           document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1] || '';
+}
+
+// Event listeners
+makeCallBtn.addEventListener('click', makeCall);
+answerBtn.addEventListener('click', answerCall);
+hangupBtn.addEventListener('click', hangupCall);
+
+phoneNumber.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        makeCall();
+    }
+});
+
+// Format phone number input
+phoneNumber.addEventListener('input', (e) => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 0) {
+        if (value.length <= 3) {
+            value = `+${value}`;
+        } else if (value.length <= 6) {
+            value = `+${value.slice(0, 3)}-${value.slice(3)}`;
+        } else if (value.length <= 10) {
+            value = `+${value.slice(0, 3)}-${value.slice(3, 6)}-${value.slice(6)}`;
+        } else {
+            value = `+${value.slice(0, 3)}-${value.slice(3, 6)}-${value.slice(6, 10)}`;
+        }
+    }
+    e.target.value = value;
+});
+</script>
+{% endblock %}

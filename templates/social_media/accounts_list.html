@@ -1,0 +1,604 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Social Media Integration - BanglaChatPro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h2 mb-1">Social Media Integration</h1>
+            <p class="text-muted mb-0">Connect and manage your social media accounts</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#connectModal">
+                <i class="fas fa-plus me-1"></i>Connect Account
+            </button>
+            <a href="{% url 'social_media:analytics' %}" class="btn btn-outline-primary">
+                <i class="fas fa-chart-line me-1"></i>Analytics
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <!-- Connected Accounts -->
+        <div class="card shadow-lg border-0 mb-4">
+            <div class="card-header bg-gradient-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-link me-2"></i>Connected Social Media Accounts
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3" id="connectedAccounts">
+                    <!-- Facebook Account -->
+                    <div class="col-md-6">
+                        <div class="social-account-card">
+                            <div class="d-flex align-items-center">
+                                <div class="social-icon bg-primary">
+                                    <i class="fab fa-facebook-f"></i>
+                                </div>
+                                <div class="ms-3 flex-grow-1">
+                                    <h6 class="mb-1">Facebook Page</h6>
+                                    <small class="text-muted">@yourbusinesspage</small>
+                                    <div class="mt-1">
+                                        <span class="badge bg-success">Connected</span>
+                                    </div>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-chart-bar me-2"></i>Analytics</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-unlink me-2"></i>Disconnect</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Instagram Account -->
+                    <div class="col-md-6">
+                        <div class="social-account-card">
+                            <div class="d-flex align-items-center">
+                                <div class="social-icon bg-gradient-instagram">
+                                    <i class="fab fa-instagram"></i>
+                                </div>
+                                <div class="ms-3 flex-grow-1">
+                                    <h6 class="mb-1">Instagram Business</h6>
+                                    <small class="text-muted">@yourbusiness</small>
+                                    <div class="mt-1">
+                                        <span class="badge bg-success">Connected</span>
+                                    </div>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-chart-bar me-2"></i>Analytics</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-unlink me-2"></i>Disconnect</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- WhatsApp Business -->
+                    <div class="col-md-6">
+                        <div class="social-account-card">
+                            <div class="d-flex align-items-center">
+                                <div class="social-icon bg-success">
+                                    <i class="fab fa-whatsapp"></i>
+                                </div>
+                                <div class="ms-3 flex-grow-1">
+                                    <h6 class="mb-1">WhatsApp Business</h6>
+                                    <small class="text-muted">+1234567890</small>
+                                    <div class="mt-1">
+                                        <span class="badge bg-success">Connected</span>
+                                    </div>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-chart-bar me-2"></i>Analytics</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-unlink me-2"></i>Disconnect</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Twitter Account -->
+                    <div class="col-md-6">
+                        <div class="social-account-card">
+                            <div class="d-flex align-items-center">
+                                <div class="social-icon bg-info">
+                                    <i class="fab fa-twitter"></i>
+                                </div>
+                                <div class="ms-3 flex-grow-1">
+                                    <h6 class="mb-1">Twitter Business</h6>
+                                    <small class="text-muted">@yourbusiness</small>
+                                    <div class="mt-1">
+                                        <span class="badge bg-warning">Pending</span>
+                                    </div>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i>Retry Connection</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-unlink me-2"></i>Remove</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Messages -->
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-gradient-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-comments me-2"></i>Recent Social Media Messages
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="message-list">
+                    <div class="message-item">
+                        <div class="d-flex align-items-start p-3 border-bottom">
+                            <div class="social-icon-sm bg-primary me-3">
+                                <i class="fab fa-facebook-f"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <h6 class="mb-0">John Doe</h6>
+                                    <small class="text-muted">2 min ago</small>
+                                </div>
+                                <p class="mb-2">Hi, I'm interested in your services. Can you tell me more about pricing?</p>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-reply me-1"></i>Reply
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-robot me-1"></i>AI Reply
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="message-item">
+                        <div class="d-flex align-items-start p-3 border-bottom">
+                            <div class="social-icon-sm bg-gradient-instagram me-3">
+                                <i class="fab fa-instagram"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <h6 class="mb-0">Sarah Wilson</h6>
+                                    <small class="text-muted">5 min ago</small>
+                                </div>
+                                <p class="mb-2">Love your products! When will the new collection be available?</p>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-reply me-1"></i>Reply
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-robot me-1"></i>AI Reply
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="message-item">
+                        <div class="d-flex align-items-start p-3">
+                            <div class="social-icon-sm bg-success me-3">
+                                <i class="fab fa-whatsapp"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <h6 class="mb-0">Mike Johnson</h6>
+                                    <small class="text-muted">10 min ago</small>
+                                </div>
+                                <p class="mb-2">I need help with my order. Order #12345</p>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-reply me-1"></i>Reply
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-robot me-1"></i>AI Reply
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Auto-Reply Settings -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-robot me-2 text-primary"></i>AI Auto-Reply Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="autoReplyEnabled" checked>
+                    <label class="form-check-label" for="autoReplyEnabled">
+                        Enable AI Auto-Reply
+                    </label>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Response Delay</label>
+                    <select class="form-select" id="responseDelay">
+                        <option value="immediate">Immediate</option>
+                        <option value="30s">30 seconds</option>
+                        <option value="1m">1 minute</option>
+                        <option value="5m">5 minutes</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">AI Personality</label>
+                    <select class="form-select" id="aiPersonality">
+                        <option value="professional">Professional</option>
+                        <option value="friendly">Friendly</option>
+                        <option value="casual">Casual</option>
+                        <option value="formal">Formal</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary w-100">
+                    <i class="fas fa-save me-2"></i>Save Settings
+                </button>
+            </div>
+        </div>
+
+        <!-- Analytics Summary -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2 text-success"></i>Analytics Summary
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <div class="stat-number text-primary">1,247</div>
+                            <div class="stat-label">Total Messages</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <div class="stat-number text-success">98.5%</div>
+                            <div class="stat-label">Response Rate</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <div class="stat-number text-warning">2.3m</div>
+                            <div class="stat-label">Avg Response Time</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <div class="stat-number text-info">4.8</div>
+                            <div class="stat-label">Satisfaction Score</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2 text-warning"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="testWebhook()">
+                        <i class="fas fa-webhook me-2"></i>Test Webhook
+                    </button>
+                    <button class="btn btn-outline-success" onclick="syncMessages()">
+                        <i class="fas fa-sync me-2"></i>Sync Messages
+                    </button>
+                    <button class="btn btn-outline-info" onclick="exportData()">
+                        <i class="fas fa-download me-2"></i>Export Data
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="configureTemplates()">
+                        <i class="fas fa-file-alt me-2"></i>Message Templates
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Connect Account Modal -->
+<div class="modal fade" id="connectModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Connect Social Media Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="platform-card" onclick="connectPlatform('facebook')">
+                            <div class="platform-icon bg-primary">
+                                <i class="fab fa-facebook-f"></i>
+                            </div>
+                            <h6>Facebook</h6>
+                            <small class="text-muted">Connect your Facebook page</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="platform-card" onclick="connectPlatform('instagram')">
+                            <div class="platform-icon bg-gradient-instagram">
+                                <i class="fab fa-instagram"></i>
+                            </div>
+                            <h6>Instagram</h6>
+                            <small class="text-muted">Connect your Instagram business account</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="platform-card" onclick="connectPlatform('whatsapp')">
+                            <div class="platform-icon bg-success">
+                                <i class="fab fa-whatsapp"></i>
+                            </div>
+                            <h6>WhatsApp</h6>
+                            <small class="text-muted">Connect WhatsApp Business API</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="platform-card" onclick="connectPlatform('twitter')">
+                            <div class="platform-icon bg-info">
+                                <i class="fab fa-twitter"></i>
+                            </div>
+                            <h6>Twitter</h6>
+                            <small class="text-muted">Connect your Twitter business account</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.social-account-card {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    padding: 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.social-account-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.social-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.social-icon-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.9rem;
+}
+
+.bg-gradient-instagram {
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.platform-card {
+    text-align: center;
+    padding: 2rem 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.platform-card:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.platform-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.message-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.message-item {
+    transition: background-color 0.2s ease;
+}
+
+.message-item:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Connect platform function
+function connectPlatform(platform) {
+    const platformNames = {
+        'facebook': 'Facebook',
+        'instagram': 'Instagram',
+        'whatsapp': 'WhatsApp',
+        'twitter': 'Twitter'
+    };
+
+    if (confirm(`Connect ${platformNames[platform]} account?`)) {
+        // Simulate connection process
+        const modal = bootstrap.Modal.getInstance(document.getElementById('connectModal'));
+        modal.hide();
+        
+        // Show loading state
+        showToast(`Connecting to ${platformNames[platform]}...`, 'info');
+        
+        // Simulate API call
+        setTimeout(() => {
+            showToast(`Successfully connected to ${platformNames[platform]}!`, 'success');
+            // Refresh the page or update UI
+            location.reload();
+        }, 2000);
+    }
+}
+
+// Quick action functions
+function testWebhook() {
+    showToast('Testing webhook configuration...', 'info');
+    setTimeout(() => {
+        showToast('Webhook test successful!', 'success');
+    }, 1500);
+}
+
+function syncMessages() {
+    showToast('Syncing messages from all platforms...', 'info');
+    setTimeout(() => {
+        showToast('Messages synced successfully!', 'success');
+    }, 2000);
+}
+
+function exportData() {
+    showToast('Preparing data export...', 'info');
+    setTimeout(() => {
+        showToast('Data export completed!', 'success');
+    }, 1500);
+}
+
+function configureTemplates() {
+    showToast('Opening message templates...', 'info');
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container') || createToastContainer();
+    
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    // Remove toast element after it's hidden
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '9999';
+    document.body.appendChild(container);
+    return container;
+}
+
+// Auto-reply settings
+document.getElementById('autoReplyEnabled').addEventListener('change', function() {
+    const isEnabled = this.checked;
+    const delaySelect = document.getElementById('responseDelay');
+    const personalitySelect = document.getElementById('aiPersonality');
+    
+    delaySelect.disabled = !isEnabled;
+    personalitySelect.disabled = !isEnabled;
+    
+    showToast(`Auto-reply ${isEnabled ? 'enabled' : 'disabled'}`, isEnabled ? 'success' : 'warning');
+});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Set up any initial configurations
+    console.log('Social Media Integration initialized');
+});
+</script>
+{% endblock %}

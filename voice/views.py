@@ -297,3 +297,119 @@ def send_sms(request):
             messages.error(request, f'Failed to send SMS: {str(e)}')
 
     return redirect('voice:interface')
+
+
+# New API endpoints for voice call interface
+@login_required
+@csrf_exempt
+def make_call_api(request):
+    """API endpoint to make outbound calls"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            phone_number = data.get('phone_number')
+            voice_type = data.get('voice_type', 'alloy')
+            language = data.get('language', 'en')
+            
+            organization = request.user.organization
+            if not organization:
+                return JsonResponse({'error': 'No organization associated with your account'}, status=400)
+
+            twilio_service = TwilioService(organization)
+            call_sid = twilio_service.make_call(phone_number)
+            
+            return JsonResponse({
+                'success': True,
+                'call_sid': call_sid,
+                'phone_number': phone_number
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+@csrf_exempt
+def hangup_call_api(request):
+    """API endpoint to hang up calls"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            call_sid = data.get('call_sid')
+            
+            if not call_sid:
+                return JsonResponse({'error': 'Call SID is required'}, status=400)
+            
+            organization = request.user.organization
+            if not organization:
+                return JsonResponse({'error': 'No organization associated with your account'}, status=400)
+
+            twilio_service = TwilioService(organization)
+            twilio_service.hangup_call(call_sid)
+            
+            return JsonResponse({'success': True})
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+def call_log_api(request):
+    """API endpoint to get call log"""
+    try:
+        # Get recent voice sessions for the user
+        sessions = VoiceSession.objects.filter(
+            user=request.user
+        ).order_by('-created_at')[:20]
+        
+        calls = []
+        for session in sessions:
+            calls.append({
+                'id': session.id,
+                'session_id': session.session_id,
+                'status': session.status,
+                'created_at': session.created_at.isoformat(),
+                'ended_at': session.ended_at.isoformat() if session.ended_at else None,
+                'duration': session.duration if hasattr(session, 'duration') else 0,
+                'voice_type': session.voice_type,
+                'language': session.language
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'calls': calls
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def voice_analytics(request):
+    """Voice analytics dashboard"""
+    # Get voice session statistics
+    total_sessions = VoiceSession.objects.filter(user=request.user).count()
+    active_sessions = VoiceSession.objects.filter(user=request.user, status='active').count()
+    completed_sessions = VoiceSession.objects.filter(user=request.user, status='completed').count()
+    
+    # Get recent recordings
+    recent_recordings = VoiceRecording.objects.filter(
+        user=request.user
+    ).order_by('-created_at')[:10]
+    
+    context = {
+        'total_sessions': total_sessions,
+        'active_sessions': active_sessions,
+        'completed_sessions': completed_sessions,
+        'recent_recordings': recent_recordings,
+    }
+    
+    return render(request, 'voice/analytics.html', context)

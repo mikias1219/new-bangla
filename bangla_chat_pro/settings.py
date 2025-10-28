@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'api',
     'social_media',
     'admin_panel',
+    'client_onboarding',
 ]
 
 MIDDLEWARE = [
