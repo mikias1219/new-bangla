@@ -130,7 +130,7 @@ def register_view(request):
                 messages.success(request, 'Registration successful! Welcome to BanglaChatPro.')
             
             login(request, user)
-            return redirect('dashboard:home')
+            return redirect('accounts:client_dashboard')
         # If form is invalid, it will fall through to the render below with errors
     else:
         form = UserRegistrationForm()
@@ -149,7 +149,13 @@ def profile_view(request):
     else:
         form = UserProfileForm(instance=request.user)
 
-    return render(request, 'accounts/profile.html', {'form': form})
+    # Add password change form
+    password_form = PasswordChangeForm(request.user)
+
+    return render(request, 'accounts/profile.html', {
+        'form': form,
+        'password_form': password_form
+    })
 
 @login_required
 def password_change_view(request):
