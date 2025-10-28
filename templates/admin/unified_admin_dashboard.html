@@ -1938,7 +1938,7 @@ async function testSocialAPI() {
     resultDiv.innerHTML = 'Testing...';
     
     try {
-        const response = await fetch('/social/api/accounts/', {
+        const response = await fetch('/social/accounts/', {
             method: 'GET',
             headers: {
                 'X-CSRFToken': getCSRFToken()
