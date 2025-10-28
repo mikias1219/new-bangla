@@ -339,6 +339,7 @@ def admin_api_dashboard_data(request):
     return JsonResponse(stats)
 
 
+@csrf_exempt
 @login_required
 def admin_api_test_chat(request):
     """Test chat functionality from admin dashboard"""
@@ -371,6 +372,7 @@ def admin_api_test_chat(request):
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 
+@csrf_exempt
 @login_required
 def admin_api_test_voice(request):
     """Test voice functionality from admin dashboard"""
