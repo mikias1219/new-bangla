@@ -340,9 +340,10 @@ def admin_api_dashboard_data(request):
 
 
 @csrf_exempt
-@login_required
 def admin_api_test_chat(request):
     """Test chat functionality from admin dashboard"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
     if not request.user.is_superuser:
         return JsonResponse({'error': 'Access denied'}, status=403)
     
@@ -373,9 +374,10 @@ def admin_api_test_chat(request):
 
 
 @csrf_exempt
-@login_required
 def admin_api_test_voice(request):
     """Test voice functionality from admin dashboard"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
     if not request.user.is_superuser:
         return JsonResponse({'error': 'Access denied'}, status=403)
     
