@@ -1,244 +1,218 @@
 #!/bin/bash
 
-# Django deployment script for Bangla Chat Pro
-# Run this on the server after pushing changes to GitHub
+# BanglaChatPro Server Deployment Script
+# This script deploys the application to your production server
 
-echo "🚀 Bangla Chat Pro Django Deployment..."
+set -e
 
-# Colors for output
+echo "🚀 Starting BanglaChatPro Server Deployment..."
+
+# Configuration
+PROJECT_NAME="bangla-chat-pro"
+SERVER_PATH="/var/www/bangla-chat-pro"
+NGINX_CONFIG="/etc/nginx/sites-available/bangla-chat-pro"
+SYSTEMD_SERVICE="bangla-chat-pro"
+DOMAIN="bdchatpro.com"
+
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Configuration
-PROJECT_DIR="/root/bangla-chat-pro"
-DOMAIN="bdchatpro.com"
-GITHUB_REPO="https://github.com/mikias1219/new-bangla.git"
-
-# Function to print colored output
-print_status() {
+log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
 
-print_success() {
+log_success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
-print_warning() {
+log_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-print_error() {
+log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 1. Pull latest changes from GitHub
-print_status "Pulling latest changes from GitHub..."
-if [ ! -d "$PROJECT_DIR" ]; then
-    print_status "Cloning repository..."
-    git clone $GITHUB_REPO $PROJECT_DIR
+# Check if running as root
+if [[ $EUID -ne 0 ]]; then
+   log_error "This script must be run as root"
+   exit 1
+fi
+
+log_info "Updating system packages..."
+apt update && apt upgrade -y
+
+log_info "Installing required packages..."
+apt install -y python3 python3-pip python3-venv nginx git supervisor curl
+
+log_info "Setting up project directory..."
+mkdir -p $SERVER_PATH
+cd $SERVER_PATH
+
+# Clone or update repository
+if [ -d ".git" ]; then
+    log_info "Updating existing repository..."
+    git pull origin main
 else
-    print_status "Updating repository..."
-    cd $PROJECT_DIR && git pull origin main || git pull origin master
+    log_info "Cloning repository..."
+    git clone https://github.com/yourusername/bangla-chat-pro.git .
 fi
 
-# 2. Setup Django application
-print_status "Setting up Django application..."
-cd $PROJECT_DIR
-
-# Create virtual environment if it doesn't exist
-if [ ! -d "venv" ]; then
-    print_status "Creating Python virtual environment..."
-    python3 -m venv venv
-fi
-
-# Activate venv and install/update dependencies
-print_status "Installing Python dependencies..."
+log_info "Setting up Python virtual environment..."
+python3 -m venv venv
 source venv/bin/activate
+
+log_info "Installing Python dependencies..."
+pip install --upgrade pip
 pip install -r requirements.txt
 
-# Create/update .env file
-print_status "Setting up environment variables..."
-cat > .env << 'EOF'
-SECRET_KEY=django-insecure-production-key-change-this-2025
-DEBUG=False
-ALLOWED_HOSTS=bdchatpro.com,www.bdchatpro.com,localhost,127.0.0.1
-DB_NAME=bangla_chat_pro
-DB_USER=bangla_chat
-DB_PASSWORD=secure_password_2025
-DB_HOST=localhost
-DB_PORT=5432
-VOICE_API_KEY=
-VOICE_API_ENDPOINT=
-OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
-STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
-STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
-EOF
+log_info "Setting up environment variables..."
+if [ ! -f ".env" ]; then
+    cp production.env .env
+    log_warning "Please update .env file with your actual configuration values!"
+fi
 
-# Run Django migrations
-print_status "Running Django migrations..."
+log_info "Setting up Django application..."
+python manage.py collectstatic --noinput
 python manage.py migrate
 
-# Collect static files
-print_status "Collecting static files..."
-python manage.py collectstatic --noinput
-
-# Create admin user if it doesn't exist
-print_status "Ensuring admin user exists..."
+# Create superuser if not exists
 python manage.py shell -c "
-from accounts.models import Organization, User
 from django.contrib.auth import get_user_model
-
-# Create organization
-org, created = Organization.objects.get_or_create(
-    name='BanglaChatPro',
-    defaults={
-        'is_active': True,
-        'description': 'AI-powered customer service platform',
-        'max_users': 100,
-        'max_conversations': 10000
-    }
-)
-
-# Create superuser
 User = get_user_model()
 if not User.objects.filter(username='admin').exists():
-    admin = User.objects.create_superuser(
-        username='admin',
-        email='admin@bdchatpro.com',
-        password='admin123',
-        first_name='Admin',
-        last_name='User',
-        organization=org,
-        is_admin=True
-    )
+    User.objects.create_superuser('admin', 'admin@bdchatpro.com', 'admin123')
     print('Superuser created')
 else:
     print('Superuser already exists')
 "
 
-# 4. Configure Nginx (if not already configured)
-print_status "Ensuring Nginx configuration..."
-if [ ! -f "/etc/nginx/sites-enabled/bdchatpro" ]; then
-    print_status "Setting up Nginx configuration..."
+log_info "Setting up static files..."
+mkdir -p /var/www/bangla-chat-pro/static
+mkdir -p /var/www/bangla-chat-pro/media
 
-    # Create Nginx configuration
-    cat > /etc/nginx/sites-available/bdchatpro << 'EOF'
-# Django Application
-server {
-    listen 80;
-    server_name bdchatpro.com www.bdchatpro.com;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "no-referrer-when-downgrade" always;
-    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
-
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-
-    # Django static files
-    location /static/ {
-        alias /root/bangla-chat-pro/staticfiles/;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # Django media files
-    location /media/ {
-        alias /root/bangla-chat-pro/media/;
-        expires 30d;
-        add_header Cache-Control "public";
-    }
-
-    # Django application
-    location / {
-        proxy_pass http://localhost:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-
-        # CORS headers for API
-        add_header 'Access-Control-Allow-Origin' 'https://bdchatpro.com' always;
-        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
-        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
-
-        if ($request_method = 'OPTIONS') {
-            return 204;
-        }
-    }
-}
-EOF
-
-    # Enable site
-    ln -sf /etc/nginx/sites-available/bdchatpro /etc/nginx/sites-enabled/
-    rm -f /etc/nginx/sites-enabled/default
-
-    # Test nginx configuration
-    nginx -t
-fi
-
-# 5. Setup SSL certificates (if not already set up)
-print_status "Ensuring SSL certificates..."
-if [ ! -d "/etc/letsencrypt/live/bdchatpro.com" ]; then
-    print_status "Obtaining SSL certificates..."
-    certbot --nginx -d bdchatpro.com -d www.bdchatpro.com --non-interactive --agree-tos --email admin@bdchatpro.com
-fi
-
-# 6. Setup systemd service for Django
-print_status "Setting up Django systemd service..."
-
-# Create systemd service file
-cat > /etc/systemd/system/bangla-chat-pro.service << EOF
+log_info "Creating systemd service..."
+cat > /etc/systemd/system/$SYSTEMD_SERVICE.service << EOF
 [Unit]
-Description=Bangla Chat Pro Django Application
+Description=BanglaChatPro Django Application
 After=network.target
 
 [Service]
-User=root
-Group=root
-WorkingDirectory=$PROJECT_DIR
-Environment="PATH=$PROJECT_DIR/venv/bin"
-ExecStart=$PROJECT_DIR/venv/bin/gunicorn --workers 4 --bind 0.0.0.0:8000 bangla_chat_pro.wsgi:application
+Type=exec
+User=www-data
+Group=www-data
+WorkingDirectory=$SERVER_PATH
+Environment=PATH=$SERVER_PATH/venv/bin
+ExecStart=$SERVER_PATH/venv/bin/gunicorn --workers 4 --bind 127.0.0.1:8000 bangla_chat_pro.wsgi:application
+ExecReload=/bin/kill -s HUP \$MAINPID
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-# Reload systemd and start service
+log_info "Starting systemd service..."
 systemctl daemon-reload
-systemctl enable bangla-chat-pro
-systemctl start bangla-chat-pro
+systemctl enable $SYSTEMD_SERVICE
+systemctl start $SYSTEMD_SERVICE
 
-# 7. Restart services
-print_status "Restarting services..."
-systemctl restart nginx
+log_info "Configuring Nginx..."
+cat > $NGINX_CONFIG << EOF
+server {
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
+    
+    # Redirect HTTP to HTTPS
+    return 301 https://\$server_name\$request_uri;
+}
 
-# 8. Health checks
-print_status "Running health checks..."
-sleep 3
+server {
+    listen 443 ssl http2;
+    server_name $DOMAIN www.$DOMAIN;
+    
+    # SSL Configuration (update with your certificates)
+    ssl_certificate /etc/ssl/certs/$DOMAIN.crt;
+    ssl_certificate_key /etc/ssl/private/$DOMAIN.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    
+    # Security headers
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    
+    # Static files
+    location /static/ {
+        alias $SERVER_PATH/staticfiles/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    location /media/ {
+        alias $SERVER_PATH/media/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # Main application
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+    
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
+}
+EOF
 
-# Check if services are running
-pm2 list
+# Enable Nginx site
+ln -sf $NGINX_CONFIG /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
 
-# Check nginx status
+log_info "Setting proper permissions..."
+chown -R www-data:www-data $SERVER_PATH
+chmod -R 755 $SERVER_PATH
+
+log_info "Creating log directory..."
+mkdir -p /var/log/bangla-chat-pro
+chown www-data:www-data /var/log/bangla-chat-pro
+
+log_success "Deployment completed successfully!"
+
+# Show status
+log_info "Service Status:"
+systemctl status $SYSTEMD_SERVICE --no-pager
+
+log_info "Nginx Status:"
 systemctl status nginx --no-pager
 
-print_success "Deployment completed!"
-print_success "Frontend: https://bdchatpro.com"
-print_success "Backend API: https://bdchatpro.com/api"
-print_success "Admin login: admin@bdchatpro.com / admin123!@#"
-print_warning "Remember to change the admin password after first login!"
+log_info "Application URLs:"
+echo "  Main Dashboard: https://$DOMAIN/"
+echo "  Login: https://$DOMAIN/login/"
+echo "  Register: https://$DOMAIN/register/"
+echo "  Chat Interface: https://$DOMAIN/chat/"
+echo "  Admin Dashboard: https://$DOMAIN/admin-dashboard/"
+echo "  Django Admin: https://$DOMAIN/admin/"
+
+log_success "🎉 BanglaChatPro deployment completed!"
+log_info "Next steps:"
+echo "  1. Update .env file with your OpenAI API key"
+echo "  2. Set up SSL certificates"
+echo "  3. Configure domain DNS"
+echo "  4. Test all features"
+echo "  5. Monitor logs: journalctl -u $SYSTEMD_SERVICE -f"
