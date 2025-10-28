@@ -5,7 +5,15 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from .models import Conversation, Message, AIAgent, Intent, Feedback
+from core.models import Client
 import json
+
+def bangla_chat_view(request):
+    """Main BanglaChatPro chat interface"""
+    clients = Client.objects.filter(is_active=True)
+    return render(request, 'chat/bangla_chat.html', {
+        'clients': clients
+    })
 
 @login_required
 def chat_interface(request):

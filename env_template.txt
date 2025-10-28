@@ -1,0 +1,100 @@
+# BanglaChatPro Environment Configuration
+# Copy this file to .env and update the values
+
+# Django Settings
+SECRET_KEY=your-secret-key-here
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1,yourdomain.com
+
+# Database (SQLite for development)
+# DATABASE_URL=sqlite:///db.sqlite3
+
+# Database (PostgreSQL for production)
+# DB_NAME=bangla_chat_pro
+# DB_USER=bangla_chat
+# DB_PASSWORD=your-db-password
+# DB_HOST=localhost
+# DB_PORT=5432
+
+# OpenAI Configuration
+OPENAI_API_KEY=your-openai-api-key-here
+
+# Security Settings (for production)
+SECURE_SSL_REDIRECT=False
+SESSION_COOKIE_SECURE=False
+CSRF_COOKIE_SECURE=False
+SECURE_HSTS_SECONDS=0
+SECURE_HSTS_INCLUDE_SUBDOMAINS=False
+SECURE_HSTS_PRELOAD=False
+
+# Email Configuration (optional)
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-email-password
+
+# Social Media API Keys (optional)
+FACEBOOK_APP_ID=your-facebook-app-id
+FACEBOOK_APP_SECRET=your-facebook-app-secret
+TWITTER_API_KEY=your-twitter-api-key
+TWITTER_API_SECRET=your-twitter-api-secret
+INSTAGRAM_ACCESS_TOKEN=your-instagram-access-token
+WHATSAPP_ACCESS_TOKEN=your-whatsapp-access-token
+
+# Twilio Configuration (for voice calls)
+TWILIO_ACCOUNT_SID=your-twilio-account-sid
+TWILIO_AUTH_TOKEN=your-twilio-auth-token
+TWILIO_PHONE_NUMBER=your-twilio-phone-number
+
+# Stripe Configuration (for payments)
+STRIPE_PUBLISHABLE_KEY=your-stripe-publishable-key
+STRIPE_SECRET_KEY=your-stripe-secret-key
+STRIPE_WEBHOOK_SECRET=your-stripe-webhook-secret
+
+# Redis Configuration (for caching and sessions)
+REDIS_URL=redis://localhost:6379/0
+
+# Celery Configuration (for background tasks)
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+# Logging Configuration
+LOG_LEVEL=INFO
+LOG_FILE=logs/bangla_chat_pro.log
+
+# File Upload Settings
+MAX_UPLOAD_SIZE=10485760  # 10MB
+ALLOWED_FILE_TYPES=image/jpeg,image/png,image/gif,audio/mpeg,audio/wav
+
+# Rate Limiting
+RATE_LIMIT_PER_MINUTE=60
+RATE_LIMIT_PER_HOUR=1000
+
+# Feature Flags
+ENABLE_VOICE_CHAT=True
+ENABLE_SOCIAL_MEDIA=True
+ENABLE_ANALYTICS=True
+ENABLE_HUMAN_HANDOFF=True
+
+# AI Settings
+DEFAULT_AI_MODEL=gpt-4o-mini
+AI_TEMPERATURE=0.7
+AI_MAX_TOKENS=1000
+MAX_CONVERSATION_LENGTH=1000
+MAX_AI_RESPONSES_BEFORE_HANDOFF=2
+
+# Voice Settings
+VOICE_API_KEY=your-voice-api-key
+VOICE_API_ENDPOINT=https://api.openai.com/v1/audio/speech
+
+# Client Settings
+DEFAULT_CLIENT_ID=1
+AUTO_DELETE_OLD_LOGS_DAYS=90
+GDPR_COMPLIANCE=True
+
+# Admin Settings
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin123
+ADMIN_EMAIL=admin@banglachatpro.com

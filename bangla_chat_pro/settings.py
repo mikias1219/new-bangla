@@ -50,12 +50,11 @@ INSTALLED_APPS = [
     # Local apps
     'accounts',
     'chat',
-    'dashboard',
     'voice',
     'api',
     'social_media',
-    'admin_panel',
     'client_onboarding',
+    'core',
 ]
 
 MIDDLEWARE = [

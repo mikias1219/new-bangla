@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BanglaChatPro - Super Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans Bengali', sans-serif; }
+        .sidebar-transition { transition: all 0.3s ease-in-out; }
+        .card-hover { transition: transform 0.2s ease-in-out; }
+        .card-hover:hover { transform: translateY(-2px); }
+        .test-section { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    </style>
+</head>
+<body class="bg-gray-100" x-data="superAdminDashboard()">
+    <!-- Sidebar -->
+    <div class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 sidebar-transition" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+        <div class="flex items-center justify-center h-16 bg-gray-800">
+            <h1 class="text-xl font-bold text-white">BanglaChatPro</h1>
+            <span class="ml-2 px-2 py-1 bg-red-500 text-xs text-white rounded">SUPER ADMIN</span>
+        </div>
+        
+        <nav class="mt-8">
+            <div class="px-4 space-y-2">
+                <a href="#" @click="currentView = 'dashboard'" 
+                   :class="currentView === 'dashboard' ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+                   class="flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                    </svg>
+                    Dashboard
+                </a>
+                
+                <a href="#" @click="currentView = 'users'" 
+                   :class="currentView === 'users' ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+                   class="flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    Users & Organizations
+                </a>
+                
+                <a href="#" @click="currentView = 'conversations'" 
+                   :class="currentView === 'conversations' ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+                   class="flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                    </svg>
+                    Conversations
+                </a>
+                
+                <a href="#" @click="currentView = 'clients'" 
+                   :class="currentView === 'clients' ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+                   class="flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                    </svg>
+                    Clients
+                </a>
+                
+                <a href="#" @click="currentView = 'ai-agents'" 
+                   :class="currentView === 'ai-agents' ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+                   class="flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                    AI Agents & Intents
+                </a>
+                
+                <a href="#" @click="currentView = 'voice'" 
+                   :class="currentView === 'voice' ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+                   class="flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                    </svg>
+                    Voice & Calls
+                </a>
+                
+                <a href="#" @click="currentView = 'social'" 
+                   :class="currentView === 'social' ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+                   class="flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-10 0a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2M9 12h6m-6 4h6"></path>
+                    </svg>
+                    Social Media
+                </a>
+                
+                <a href="#" @click="currentView = 'testing'" 
+                   :class="currentView === 'testing' ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+                   class="flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Testing & Debug
+                </a>
+                
+                <a href="#" @click="currentView = 'settings'" 
+                   :class="currentView === 'settings' ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
+                   class="flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c-.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    System Settings
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="ml-0 lg:ml-64 transition-all duration-300">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200">
+            <div class="flex items-center justify-between px-6 py-4">
+                <div class="flex items-center">
+                    <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden mr-4 p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <h2 class="text-2xl font-bold text-gray-900" x-text="getViewTitle()"></h2>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Quick Actions -->
+                    <a href="/" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                        View Chat Interface
+                    </a>
+                    
+                    <!-- User Menu -->
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open" class="flex items-center space-x-2 p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                            <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                                <span class="text-sm font-medium text-white">SA</span>
+                            </div>
+                            <span class="text-sm font-medium">Super Admin</span>
+                        </button>
+                        
+                        <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                            <a href="/admin/" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Django Admin</a>
+                            <a href="/admin/logout/" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <main class="p-6">
+            <!-- Dashboard View -->
+            <div x-show="currentView === 'dashboard'" class="space-y-6">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Total Users</p>
+                                <p class="text-2xl font-bold text-gray-900" x-text="stats.total_users">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-green-100 text-green-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Total Conversations</p>
+                                <p class="text-2xl font-bold text-gray-900" x-text="stats.total_conversations">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Voice Calls</p>
+                                <p class="text-2xl font-bold text-gray-900" x-text="stats.total_voice_calls">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Active Clients</p>
+                                <p class="text-2xl font-bold text-gray-900" x-text="stats.total_clients">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <a href="/admin/" target="_blank" class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                            <div class="flex items-center">
+                                <svg class="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c-.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                </svg>
+                                <div>
+                                    <h4 class="font-medium text-gray-900">Django Admin</h4>
+                                    <p class="text-sm text-gray-600">Full database management</p>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <button @click="currentView = 'testing'" class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                            <div class="flex items-center">
+                                <svg class="w-8 h-8 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <div>
+                                    <h4 class="font-medium text-gray-900">Test Features</h4>
+                                    <p class="text-sm text-gray-600">Test chat & voice APIs</p>
+                                </div>
+                            </div>
+                        </button>
+                        
+                        <a href="/" target="_blank" class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                            <div class="flex items-center">
+                                <svg class="w-8 h-8 text-purple-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                </svg>
+                                <div>
+                                    <h4 class="font-medium text-gray-900">Chat Interface</h4>
+                                    <p class="text-sm text-gray-600">User-facing chat</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Testing & Debug View -->
+            <div x-show="currentView === 'testing'" class="space-y-6">
+                <div class="test-section text-white rounded-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4">🧪 Testing & Debug Center</h3>
+                    <p class="text-lg opacity-90">Test all BanglaChatPro features from this admin panel</p>
+                </div>
+
+                <!-- Chat API Testing -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">💬 Chat API Testing</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Test Message</label>
+                            <input x-model="testMessage" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="আপনার বার্তা লিখুন...">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Client ID</label>
+                            <select x-model="testClientId" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="1">Test Client</option>
+                            </select>
+                        </div>
+                        <button @click="testChatAPI()" :disabled="isTestingChat" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                            <span x-show="!isTestingChat">Test Chat API</span>
+                            <span x-show="isTestingChat">Testing...</span>
+                        </button>
+                        
+                        <div x-show="chatTestResult" class="mt-4 p-4 bg-gray-50 rounded-lg">
+                            <h5 class="font-medium text-gray-900 mb-2">Test Result:</h5>
+                            <pre x-text="JSON.stringify(chatTestResult, null, 2)" class="text-sm text-gray-700"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Voice API Testing -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">🎤 Voice API Testing</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Test Text for TTS</label>
+                            <input x-model="testVoiceText" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Hello, this is a test message">
+                        </div>
+                        <button @click="testVoiceAPI()" :disabled="isTestingVoice" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors">
+                            <span x-show="!isTestingVoice">Test Voice API</span>
+                            <span x-show="isTestingVoice">Testing...</span>
+                        </button>
+                        
+                        <div x-show="voiceTestResult" class="mt-4 p-4 bg-gray-50 rounded-lg">
+                            <h5 class="font-medium text-gray-900 mb-2">Test Result:</h5>
+                            <pre x-text="JSON.stringify(voiceTestResult, null, 2)" class="text-sm text-gray-700"></pre>
+                            <div x-show="voiceTestResult && voiceTestResult.audio_url" class="mt-2">
+                                <audio controls class="w-full">
+                                    <source :src="voiceTestResult.audio_url" type="audio/mpeg">
+                                </audio>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Status -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">📊 System Status</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 border border-gray-200 rounded-lg">
+                            <h5 class="font-medium text-gray-900">OpenAI API</h5>
+                            <div class="mt-2">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full" :class="openaiStatus ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+                                    <span x-text="openaiStatus ? 'Connected' : 'Not Connected'"></span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 border border-gray-200 rounded-lg">
+                            <h5 class="font-medium text-gray-900">Database</h5>
+                            <div class="mt-2">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                    Connected
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other views will be added here -->
+            <div x-show="currentView === 'users'" class="space-y-6">
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Users & Organizations Management</h3>
+                    <p class="text-gray-600">Use Django Admin for full user and organization management.</p>
+                    <a href="/admin/" target="_blank" class="mt-4 inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                        Open Django Admin
+                    </a>
+                </div>
+            </div>
+
+            <div x-show="currentView === 'conversations'" class="space-y-6">
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Conversations Management</h3>
+                    <p class="text-gray-600">Use Django Admin for full conversation management.</p>
+                    <a href="/admin/" target="_blank" class="mt-4 inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                        Open Django Admin
+                    </a>
+                </div>
+            </div>
+
+            <div x-show="currentView === 'clients'" class="space-y-6">
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Clients Management</h3>
+                    <p class="text-gray-600">Use Django Admin for full client management.</p>
+                    <a href="/admin/" target="_blank" class="mt-4 inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                        Open Django Admin
+                    </a>
+                </div>
+            </div>
+
+            <div x-show="currentView === 'ai-agents'" class="space-y-6">
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">AI Agents & Intents Management</h3>
+                    <p class="text-gray-600">Use Django Admin for full AI agent and intent management.</p>
+                    <a href="/admin/" target="_blank" class="mt-4 inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                        Open Django Admin
+                    </a>
+                </div>
+            </div>
+
+            <div x-show="currentView === 'voice'" class="space-y-6">
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Voice & Calls Management</h3>
+                    <p class="text-gray-600">Use Django Admin for full voice and call management.</p>
+                    <a href="/admin/" target="_blank" class="mt-4 inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                        Open Django Admin
+                    </a>
+                </div>
+            </div>
+
+            <div x-show="currentView === 'social'" class="space-y-6">
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Social Media Management</h3>
+                    <p class="text-gray-600">Use Django Admin for full social media management.</p>
+                    <a href="/admin/" target="_blank" class="mt-4 inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                        Open Django Admin
+                    </a>
+                </div>
+            </div>
+
+            <div x-show="currentView === 'settings'" class="space-y-6">
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">System Settings</h3>
+                    <p class="text-gray-600">Use Django Admin for full system settings management.</p>
+                    <a href="/admin/" target="_blank" class="mt-4 inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                        Open Django Admin
+                    </a>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function superAdminDashboard() {
+            return {
+                sidebarOpen: false,
+                currentView: 'dashboard',
+                stats: {
+                    total_users: 0,
+                    total_conversations: 0,
+                    total_voice_calls: 0,
+                    total_clients: 0,
+                },
+                testMessage: 'আপনার বার্তা লিখুন...',
+                testClientId: 1,
+                testVoiceText: 'Hello, this is a test message',
+                isTestingChat: false,
+                isTestingVoice: false,
+                chatTestResult: null,
+                voiceTestResult: null,
+                openaiStatus: false,
+                
+                getViewTitle() {
+                    const titles = {
+                        'dashboard': 'Super Admin Dashboard',
+                        'users': 'Users & Organizations',
+                        'conversations': 'Conversations',
+                        'clients': 'Clients',
+                        'ai-agents': 'AI Agents & Intents',
+                        'voice': 'Voice & Calls',
+                        'social': 'Social Media',
+                        'testing': 'Testing & Debug',
+                        'settings': 'System Settings'
+                    };
+                    return titles[this.currentView] || 'Super Admin Dashboard';
+                },
+                
+                async init() {
+                    await this.loadDashboardData();
+                    await this.checkOpenAIStatus();
+                },
+                
+                async loadDashboardData() {
+                    try {
+                        const response = await fetch('/admin-dashboard/api/dashboard-data/');
+                        if (response.ok) {
+                            this.stats = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('Error loading dashboard data:', error);
+                    }
+                },
+                
+                async checkOpenAIStatus() {
+                    // Simple test to check if OpenAI is working
+                    try {
+                        const response = await fetch('/api/chat/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': this.getCSRFToken()
+                            },
+                            body: JSON.stringify({
+                                client_id: 1,
+                                user_name: 'test',
+                                message: 'test'
+                            })
+                        });
+                        this.openaiStatus = response.ok;
+                    } catch (error) {
+                        this.openaiStatus = false;
+                    }
+                },
+                
+                async testChatAPI() {
+                    this.isTestingChat = true;
+                    this.chatTestResult = null;
+                    
+                    try {
+                        const response = await fetch('/api/chat/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': this.getCSRFToken()
+                            },
+                            body: JSON.stringify({
+                                client_id: this.testClientId,
+                                user_name: 'Admin Test',
+                                message: this.testMessage
+                            })
+                        });
+                        
+                        this.chatTestResult = await response.json();
+                    } catch (error) {
+                        this.chatTestResult = { error: error.message };
+                    } finally {
+                        this.isTestingChat = false;
+                    }
+                },
+                
+                async testVoiceAPI() {
+                    this.isTestingVoice = true;
+                    this.voiceTestResult = null;
+                    
+                    try {
+                        const response = await fetch('/api/voice/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': this.getCSRFToken()
+                            },
+                            body: JSON.stringify({
+                                client_id: this.testClientId,
+                                caller_name: 'Admin Test',
+                                question: this.testVoiceText
+                            })
+                        });
+                        
+                        this.voiceTestResult = await response.json();
+                    } catch (error) {
+                        this.voiceTestResult = { error: error.message };
+                    } finally {
+                        this.isTestingVoice = false;
+                    }
+                },
+                
+                getCSRFToken() {
+                    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

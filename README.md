@@ -1,377 +1,268 @@
-# Bangla Chat Pro - AI SaaS Platform
+# BanglaChatPro - AI Customer Care Platform
 
-A complete multi-tenant SaaS platform for AI-powered customer chatbots with WhatsApp and Facebook Messenger integration.
+A comprehensive Django-based AI customer care platform designed specifically for Bangla language support, featuring real-time chat, voice interactions, and comprehensive admin management.
 
 ## 🚀 Features
 
 ### Core Features
-- ✅ **Multi-tenant Architecture** - Complete data isolation per client
-- ✅ **AI Training Pipeline** - Upload documents to train custom AI agents
-- ✅ **Real-time Chat Interface** - Web-based chat with AI agents
-- ✅ **Document Processing** - Support for PDF, DOCX, TXT, CSV files
-- ✅ **Vector Embeddings** - Semantic search using OpenAI embeddings
-- ✅ **Conversation History** - Complete chat history and analytics
-- ✅ **Admin Dashboard** - Platform management interface
+- **🤖 AI-Powered Chat**: OpenAI GPT-4 integration with Bangla language support
+- **🎤 Voice Interactions**: Web Speech API + OpenAI TTS for voice conversations
+- **👥 Human Handoff**: Automatic escalation after 2 failed AI responses
+- **🏢 Multi-Client Support**: Manage multiple businesses from one platform
+- **📊 Analytics Dashboard**: Comprehensive analytics and reporting
+- **🔧 Custom Admin Panel**: Unified admin dashboard with all super admin features
 
-### Integrations
-- ✅ **WhatsApp Business API** - Automated WhatsApp responses
-- ✅ **Facebook Messenger** - Facebook page integration
-- ✅ **Webhook Support** - Real-time message processing
+### Technical Features
+- **🔒 Security**: CSRF protection, authentication, environment-based config
+- **📱 Responsive UI**: TailwindCSS with Bangla font support
+- **🌐 RESTful API**: Complete API for all features
+- **📊 Real-time Updates**: WebSocket support for live chat
+- **🗄️ SQLite Database**: Lightweight, production-ready database
+- **🚀 Production Ready**: Gunicorn + Nginx deployment configuration
 
-### SaaS Features
-- ✅ **Subscription Plans** - Starter, Professional, Enterprise tiers
-- ✅ **Usage Tracking** - Monthly chat limits and analytics
-- ✅ **Billing System** - Stripe integration ready
-- ✅ **Client Management** - Organization and user management
-
-## 🏗️ Architecture
-
-```
-Frontend (Next.js)          Backend (FastAPI)
-├── Dashboard              ├── Multi-tenant API
-├── Chat Interface         ├── AI Training Service
-├── Admin Panel            ├── WhatsApp/Facebook Webhooks
-└── Client Management      ├── Analytics & Billing
-
-Database (SQLite/PostgreSQL)
-├── Organizations          ├── AI Agents
-├── Training Documents     ├── Conversations
-├── Messages              ├── Payments
-└── Analytics
-```
-
-## 📋 Prerequisites
+## 📋 Requirements
 
 - Python 3.8+
-- Node.js 18+
-- SQLite (or PostgreSQL for production)
-- OpenAI API key
-- WhatsApp Business API (optional)
-- Facebook App (optional)
-- Stripe account (optional)
+- Django 5.0+
+- OpenAI API Key
+- Node.js (for frontend assets)
+- Nginx (for production)
+- Gunicorn (for production)
 
-## 🚀 Quick Start
+## 🛠️ Installation
 
-### 1. Clone and Setup
+### Local Development
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/bangla-chat-pro.git
+   cd bangla-chat-pro
+   ```
+
+2. **Create virtual environment**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Set up environment variables**
+   ```bash
+   cp production.env .env
+   # Edit .env file with your configuration
+   ```
+
+5. **Run migrations**
+   ```bash
+   python manage.py migrate
+   ```
+
+6. **Create superuser**
+   ```bash
+   python manage.py createsuperuser
+   ```
+
+7. **Start development server**
+   ```bash
+   python manage.py runserver
+   ```
+
+### Production Deployment
+
+1. **Run deployment script**
+   ```bash
+   ./deploy.sh
+   ```
+
+2. **Configure environment**
+   - Update `.env` file with production values
+   - Set up SSL certificates
+   - Configure domain DNS
+
+3. **Start services**
+   ```bash
+   systemctl start bangla-chat-pro
+   systemctl start nginx
+   ```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Key environment variables to configure:
 
 ```bash
-git clone <your-repo-url>
-cd bangla-chat-pro
+# Required
+SECRET_KEY=your-secret-key
+OPENAI_API_KEY=your-openai-api-key
+DEBUG=False
+ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
 
-# Run setup script
-python3 setup_environment.py
+# Optional
+DATABASE_URL=sqlite:///db.sqlite3
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
 ```
 
-### 2. Configure Environment
+### OpenAI API Setup
 
-Edit `.env` file with your API keys:
-```env
-OPENAI_API_KEY=your_openai_api_key
-WHATSAPP_ACCESS_TOKEN=your_whatsapp_token
-FACEBOOK_ACCESS_TOKEN=your_facebook_token
-STRIPE_SECRET_KEY=your_stripe_key
-```
-
-### 3. Initialize Database
-
+1. Get API key from [OpenAI Platform](https://platform.openai.com/)
+2. Add to `.env` file:
    ```bash
-   cd backend
-
-# Migrate to multi-tenant architecture
-python migrate_to_multi_tenant.py
-
-# Create admin user
-python create_admin.py
-```
-
-### 4. Start Services
-
-   ```bash
-# Terminal 1 - Backend
-cd backend
-source venv/bin/activate
-pip install -r requirements.txt
-python run.py
-
-# Terminal 2 - Frontend
-npm install
-npm run dev
-```
-
-### 5. Access Application
-
-- **Frontend**: http://localhost:3002
-- **Admin Dashboard**: http://localhost:3002/admin
-- **API Documentation**: http://localhost:8000/docs
-
-## 🎯 Usage Guide
-
-### For SaaS Owners (Platform Admins)
-
-1. **Access Admin Dashboard**
-   - Login with admin credentials
-   - Manage organizations and users
-   - View platform analytics
-
-2. **Create Client Organizations**
-   ```bash
-   # Admin creates organization for new client
-   curl -X POST https://yourdomain.com/api/organizations/ \
-     -H "Authorization: Bearer <admin_token>" \
-     -d '{"name": "Client Corp", "domain": "clientcorp"}'
+   OPENAI_API_KEY=sk-your-api-key-here
    ```
 
-3. **Monitor Usage**
-   - Track chat volumes per client
-   - Monitor AI agent performance
-   - View revenue analytics
-
-### For Clients (Organization Owners)
-
-1. **Setup Organization**
-   - Login to dashboard
-   - Configure organization settings
-
-2. **Train AI Agents**
-   - Upload training documents (PDF, DOCX, TXT)
-   - Create AI agents with custom personalities
-   - Test agents in chat interface
-
-3. **Configure Integrations**
-   ```bash
-   # Configure WhatsApp
-   curl -X PUT https://yourdomain.com/api/organizations/ai-agents/1/integrations/whatsapp \
-     -H "Authorization: Bearer <token>" \
-     -d '{"phone_number": "+1234567890"}'
-
-   # Configure Facebook
-   curl -X PUT https://yourdomain.com/api/organizations/ai-agents/1/integrations/facebook \
-     -H "Authorization: Bearer <token>" \
-     -d '{"page_id": "your_page_id"}'
-   ```
-
-4. **Monitor Performance**
-   - View conversation analytics
-   - Track response quality
-   - Monitor usage limits
-
-## 💰 Pricing & Monetization
-
-### Subscription Plans
-
-| Plan | Monthly Price | AI Agents | Monthly Chats | Features |
-|------|---------------|-----------|----------------|----------|
-| **Starter** | $29 | 1 | 1,000 | Basic training, web chat |
-| **Professional** | $99 | 3 | 5,000 | All integrations, analytics |
-| **Enterprise** | $299 | Unlimited | 25,000 | Custom features, priority support |
-
-### Revenue Streams
-
-1. **Subscription Fees** - Monthly recurring revenue
-2. **Overage Charges** - Extra chats beyond plan limits
-3. **Premium Integrations** - WhatsApp/Facebook add-ons
-4. **Custom Training** - Enterprise document processing
-5. **White-label Solutions** - Custom branding
-
-## 🔧 API Reference
+## 📚 API Documentation
 
 ### Core Endpoints
 
-#### Authentication
-   ```bash
-POST /auth/token          # Login
-POST /auth/register       # Register new user
-```
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Main chat interface |
+| `/admin-dashboard/` | GET | Custom admin dashboard |
+| `/admin/` | GET | Django admin interface |
+| `/api/chat/` | POST | Send chat message |
+| `/api/voice/` | POST | Process voice input |
+| `/api/rate/` | POST | Rate conversation |
+| `/api/handoff/` | POST | Request human handoff |
+| `/api/clients/` | GET/POST | Manage clients |
+| `/api/intents/` | GET/POST | Manage intents |
 
-#### Organization Management
+### API Examples
+
+**Send Chat Message**
 ```bash
-GET  /organizations/my                    # Get current org
-POST /organizations/ai-agents             # Create AI agent
-GET  /organizations/ai-agents             # List AI agents
-POST /organizations/documents/upload      # Upload training docs
+curl -X POST http://localhost:8000/api/chat/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": 1,
+    "user_name": "User Name",
+    "message": "আপনার বার্তা"
+  }'
 ```
 
-#### Chat & AI
-   ```bash
-POST /chat/agents/{id}/chat              # Send message to AI
-GET  /chat/conversations                 # Get conversations
-GET  /analytics/conversations/overview   # Chat analytics
-   ```
-
-#### Integrations
-   ```bash
-POST /chat/webhooks/whatsapp             # WhatsApp webhook
-POST /chat/webhooks/facebook             # Facebook webhook
-GET  /chat/webhooks/whatsapp             # WhatsApp verification
-GET  /chat/webhooks/facebook             # Facebook verification
-```
-
-#### Billing
+**Process Voice Input**
 ```bash
-GET  /billing/plans                      # Get pricing plans
-GET  /billing/subscription               # Current subscription
-POST /billing/subscription/change-plan   # Change plan
-GET  /billing/payments                   # Payment history
+curl -X POST http://localhost:8000/api/voice/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": 1,
+    "caller_name": "Caller Name",
+    "question": "Voice question"
+  }'
 ```
 
-## 🚀 Production Deployment
+## 🎯 Usage
 
-### 1. Server Setup
+### For Users
+1. Visit the main chat interface
+2. Select your client/business
+3. Start chatting in Bangla
+4. Use voice mode for hands-free interaction
+5. Request human help if needed
 
+### For Admins
+1. Login to admin dashboard (`/admin-dashboard/`)
+2. Monitor conversations and analytics
+3. Manage clients and AI agents
+4. Test features using the testing panel
+5. Configure system settings
+
+### For Developers
+1. Use Django admin for database management
+2. Access API endpoints for integration
+3. Customize templates and views
+4. Add new features using the modular structure
+
+## 🏗️ Project Structure
+
+```
+bangla-chat-pro/
+├── accounts/           # User and organization management
+├── api/               # REST API endpoints
+├── chat/              # Chat interface and models
+├── client_onboarding/ # Client onboarding flow
+├── core/              # Core BanglaChatPro models and admin
+├── services/          # External service integrations
+├── social_media/      # Social media integration
+├── templates/         # HTML templates
+├── voice/             # Voice features
+├── static/            # Static files (CSS, JS, images)
+├── bangla_chat_pro/   # Django project settings
+├── requirements.txt   # Python dependencies
+├── deploy.sh         # Production deployment script
+└── production.env    # Environment configuration template
+```
+
+## 🔒 Security
+
+- CSRF protection enabled
+- Secure session cookies
+- Environment-based configuration
+- Input validation and sanitization
+- Rate limiting on API endpoints
+- HTTPS enforcement in production
+
+## 📊 Monitoring
+
+### Logs
+- Application logs: `/var/log/bangla-chat-pro/`
+- System logs: `journalctl -u bangla-chat-pro -f`
+- Nginx logs: `/var/log/nginx/`
+
+### Health Checks
+- Service status: `systemctl status bangla-chat-pro`
+- Database: `python manage.py check --deploy`
+- API health: `curl http://localhost:8000/api/clients/`
+
+## 🚀 Deployment
+
+### Quick Deploy
 ```bash
-# Install dependencies
-sudo apt update
-sudo apt install python3 python3-pip nodejs npm nginx certbot
-
-# Setup Python virtual environment
-cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+./deploy.sh
 ```
 
-### 2. Configure Nginx
+### Manual Deploy
+1. Clone repository on server
+2. Set up virtual environment
+3. Install dependencies
+4. Configure environment
+5. Run migrations
+6. Set up systemd service
+7. Configure Nginx
+8. Start services
 
-```nginx
-# /etc/nginx/sites-available/bdchatpro.com
-server {
-    listen 80;
-    server_name bdchatpro.com www.bdchatpro.com;
-    return 301 https://$server_name$request_uri;
-}
+## 🧪 Testing
 
-server {
-    listen 443 ssl http2;
-    server_name bdchatpro.com www.bdchatpro.com;
+### Test Features
+1. Login to admin dashboard
+2. Go to "Testing & Debug" section
+3. Test chat API with sample messages
+4. Test voice API with sample text
+5. Verify all endpoints are working
 
-    # SSL certificates
-    ssl_certificate /etc/letsencrypt/live/bdchatpro.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/bdchatpro.com/privkey.pem;
-
-    # API routes - proxy to FastAPI backend
-    location /api/ {
-        proxy_pass http://127.0.0.1:8000/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-    }
-
-    # Frontend routes - serve Next.js app
-    location / {
-        proxy_pass http://127.0.0.1:3002;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-### 3. Setup SSL
-
+### Manual Testing
 ```bash
-# Get SSL certificates
-certbot --nginx -d bdchatpro.com -d www.bdchatpro.com
+# Test main interface
+curl http://localhost:8000/
 
-# Setup auto-renewal
-crontab -e
-# Add: 0 12 * * * /usr/bin/certbot renew --quiet
+# Test API
+curl -X POST http://localhost:8000/api/chat/ \
+  -H "Content-Type: application/json" \
+  -d '{"client_id": 1, "user_name": "Test", "message": "Hello"}'
 ```
-
-### 4. Process Management with PM2
-
-```bash
-# Install PM2
-npm install -g pm2
-
-# Start backend
-cd backend
-pm2 start --name bangla-chat-backend "source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"
-
-# Start frontend
-cd ..
-npm run build
-pm2 start --name bangla-chat-frontend "npm start"
-
-# Save PM2 configuration
-pm2 save
-pm2 startup
-```
-
-### 5. Environment Setup
-
-```bash
-# Production environment variables
-cp .env .env.production
-# Edit .env.production with production values
-```
-
-## 🔒 Security Considerations
-
-- **Data Isolation**: Multi-tenant architecture ensures client data separation
-- **API Authentication**: JWT tokens with organization scoping
-- **File Upload Security**: File type validation and size limits
-- **Rate Limiting**: Usage limits prevent abuse
-- **Webhook Verification**: Secure webhook endpoints for integrations
-
-## 📊 Monitoring & Analytics
-
-- **Real-time Metrics**: Chat volumes, response times, user satisfaction
-- **Usage Tracking**: Monthly limits and overage monitoring
-- **Performance Monitoring**: AI agent response quality
-- **Revenue Analytics**: Subscription and payment tracking
-
-## 🚨 Troubleshooting
-
-### Common Issues
-
-1. **Admin dashboard not loading**
-   ```bash
-   # Check nginx configuration
-   nginx -t
-   systemctl reload nginx
-   ```
-
-2. **Database migration issues**
-   ```bash
-   cd backend
-   source venv/bin/activate
-   python migrate_to_multi_tenant.py
-   ```
-
-3. **AI responses not working**
-   - Check OpenAI API key in `.env`
-   - Verify document processing completed
-   - Check agent training status
-
-4. **Webhook integrations failing**
-   - Verify webhook URLs in WhatsApp/Facebook dashboards
-   - Check API keys and tokens
-   - Review server logs for webhook errors
-
-## 📈 Scaling Considerations
-
-- **Database**: Upgrade to PostgreSQL for production
-- **Caching**: Implement Redis for session and API caching
-- **File Storage**: Use AWS S3 or similar for document storage
-- **Load Balancing**: Multiple backend instances behind nginx
-- **Background Jobs**: Use Celery for document processing queues
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+2. Create feature branch
+3. Make changes
+4. Test thoroughly
+5. Submit pull request
 
 ## 📄 License
 
@@ -379,10 +270,22 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🆘 Support
 
-- **Documentation**: Check this README and API docs
-- **Issues**: Create GitHub issues for bugs/features
-- **Email**: admin@bdchatpro.com
+- **Documentation**: Check this README and API documentation
+- **Issues**: Report bugs via GitHub issues
+- **Admin Panel**: Use the testing section for debugging
+- **Logs**: Check application and system logs
+
+## 🎉 Success Metrics
+
+After deployment, verify:
+- ✅ Main chat interface loads
+- ✅ Admin dashboard accessible
+- ✅ API endpoints respond correctly
+- ✅ OpenAI integration working
+- ✅ Voice features functional
+- ✅ Database persistent
+- ✅ All security measures active
 
 ---
 
-**Built with ❤️ for AI-powered customer service automation**
+**BanglaChatPro** - Empowering businesses with AI-powered Bangla customer care! 🇧🇩

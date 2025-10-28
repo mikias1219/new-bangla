@@ -1,193 +1,306 @@
 import openai
-import logging
+import os
 from django.conf import settings
-from accounts.models import APIKey
 from typing import Optional, Dict, Any
+import logging
 
 logger = logging.getLogger(__name__)
 
+
 class OpenAIService:
-    """Service for interacting with OpenAI API"""
-
-    def __init__(self, organization):
-        self.organization = organization
-        self.api_key = self._get_api_key()
-        if self.api_key:
-            openai.api_key = self.api_key.key
+    """Service for OpenAI API integration"""
+    
+    def __init__(self):
+        self.api_key = os.getenv('OPENAI_API_KEY')
+        if not self.api_key:
+            logger.warning("OpenAI API key not found in environment variables")
         else:
-            logger.warning(f"No OpenAI API key found for organization {organization.name}")
-
-    def _get_api_key(self) -> Optional[APIKey]:
-        """Get active OpenAI API key for the organization"""
-        return APIKey.objects.filter(
-            organization=self.organization,
-            provider='openai',
-            is_active=True
-        ).first()
-
-    def generate_chat_response(self, messages: list, ai_agent, **kwargs) -> Optional[str]:
+            openai.api_key = self.api_key
+    
+    def generate_chat_response(
+        self, 
+        message: str, 
+        conversation_history: list = None,
+        system_prompt: str = None,
+        model: str = "gpt-4o-mini",
+        temperature: float = 0.7,
+        max_tokens: int = 1000
+    ) -> Dict[str, Any]:
         """
-        Generate a chat response using OpenAI
-
+        Generate AI chat response in Bangla
+        
         Args:
-            messages: List of message dictionaries with 'role' and 'content'
-            ai_agent: AIAgent instance with configuration
-            **kwargs: Additional parameters
-
+            message: User message
+            conversation_history: Previous conversation messages
+            system_prompt: System prompt for AI behavior
+            model: OpenAI model to use
+            temperature: Response creativity (0-2)
+            max_tokens: Maximum tokens in response
+            
         Returns:
-            Generated response text or None if failed
-        """
-        if not self.api_key or not self.api_key.key or self.api_key.key.startswith('sk-xxx'):
-            logger.warning("No valid OpenAI API key available - using mock response")
-            # Mock responses for testing
-            mock_responses = [
-                "Hello! Thank you for your message. I'm here to help you with any questions you might have.",
-                "That's an interesting question. Let me provide you with some helpful information.",
-                "I understand your concern. Here's what I can tell you about that.",
-                "Thank you for reaching out. I'd be happy to assist you with this.",
-                "That's a great question! Here's what I know about that topic.",
-                "আপনার বার্তার জন্য ধন্যবাদ! আমি আপনার যেকোনো প্রশ্নে সাহায্য করতে এখানে আছি।",
-                "এটি একটি আকর্ষণীয় প্রশ্ন। আমি আপনাকে কিছু সহায়ক তথ্য দিতে পারি।",
-                "আমি আপনার উদ্বেগ বুঝতে পারছি। এ সম্পর্কে আমি যা বলতে পারি তা এখানে।"
-            ]
-            import random
-            return random.choice(mock_responses)
-
-        try:
-            # Prepare system message
-            system_message = {
-                "role": "system",
-                "content": ai_agent.system_prompt
-            }
-
-            # Combine system message with conversation history
-            full_messages = [system_message] + messages
-
-            # Make API call
-            response = openai.ChatCompletion.create(
-                model=ai_agent.model_name,
-                messages=full_messages,
-                temperature=ai_agent.temperature,
-                max_tokens=ai_agent.max_tokens,
-                **kwargs
-            )
-
-            # Extract response
-            if response.choices:
-                content = response.choices[0].message.content.strip()
-                logger.info(f"Generated AI response for {ai_agent.name}: {content[:100]}...")
-                return content
-            else:
-                logger.error("No response choices returned from OpenAI")
-                return "I apologize, but I couldn't generate a response. Please try again."
-
-        except openai.error.AuthenticationError:
-            logger.error("OpenAI authentication failed")
-            return "Authentication error with AI service. Please contact support."
-
-        except openai.error.RateLimitError:
-            logger.error("OpenAI rate limit exceeded")
-            return "I'm currently experiencing high demand. Please try again in a moment."
-
-        except openai.error.InvalidRequestError as e:
-            logger.error(f"OpenAI invalid request: {str(e)}")
-            return "I encountered an error processing your request. Please try rephrasing."
-
-        except Exception as e:
-            logger.error(f"OpenAI API error: {str(e)}")
-            return "I'm experiencing technical difficulties. Please try again later."
-
-    def transcribe_audio(self, audio_file_path: str, language: str = None) -> Dict[str, Any]:
-        """
-        Transcribe audio using OpenAI Whisper
-
-        Args:
-            audio_file_path: Path to audio file
-            language: Language code (optional)
-
-        Returns:
-            Dict with transcription data
-        """
-        if not self.api_key or not self.api_key.key or self.api_key.key.startswith('sk-xxx'):
-            # Mock transcription for testing
-            return {
-                'success': True,
-                'transcription': "This is a mock transcription of the voice message. In a real implementation, this would be processed by OpenAI Whisper.",
-                'confidence': 0.95,
-                'language': language or 'en'
-            }
-
-        try:
-            with open(audio_file_path, 'rb') as audio_file:
-                # Use Whisper API
-                response = openai.Audio.transcribe(
-                    model="whisper-1",
-                    file=audio_file,
-                    language=language if language else None
-                )
-
-            transcription = response.get('text', '').strip()
-
-            return {
-                'success': True,
-                'transcription': transcription,
-                'confidence': 0.95,  # Whisper doesn't provide confidence scores
-                'language': language or 'auto'
-            }
-
-        except Exception as e:
-            logger.error(f"Audio transcription error: {str(e)}")
-            return {
-                'success': False,
-                'error': str(e),
-                'transcription': '',
-                'confidence': 0.0
-            }
-
-    def generate_speech(self, text: str, voice: str = "alloy", speed: float = 1.0) -> Optional[bytes]:
-        """
-        Generate speech from text using OpenAI TTS
-
-        Args:
-            text: Text to convert to speech
-            voice: Voice to use (alloy, echo, fable, onyx, nova, shimmer)
-            speed: Speech speed (0.25 to 4.0)
-
-        Returns:
-            Audio data as bytes or None if failed
+            Dict containing response, confidence, and metadata
         """
         if not self.api_key:
-            logger.error("No OpenAI API key available for TTS")
-            return None
-
+            return {
+                'response': 'দুঃখিত, AI সেবা এখন উপলব্ধ নয়।',
+                'confidence': 0.0,
+                'error': 'OpenAI API key not configured'
+            }
+        
         try:
-            response = openai.Audio.speech.create(
-                model="tts-1",
+            # Default system prompt for Bangla responses
+            if not system_prompt:
+                system_prompt = """
+                আপনি একজন বন্ধুত্বপূর্ণ এবং সহায়ক AI সহকারী। 
+                আপনার কাজ হল বাংলা ভাষায় ব্যবহারকারীদের সাহায্য করা।
+                সবসময় বাংলায় উত্তর দিন, যদি না ব্যবহারকারী ইংরেজি চান।
+                বিনয়ী এবং সহায়ক হন।
+                """
+            
+            # Prepare messages
+            messages = [{"role": "system", "content": system_prompt}]
+            
+            # Add conversation history
+            if conversation_history:
+                for msg in conversation_history[-10:]:  # Last 10 messages
+                    messages.append({
+                        "role": "user" if msg.get('sender') == 'user' else "assistant",
+                        "content": msg.get('content', '')
+                    })
+            
+            # Add current message
+            messages.append({"role": "user", "content": message})
+            
+            # Call OpenAI API
+            response = openai.ChatCompletion.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=1,
+                frequency_penalty=0,
+                presence_penalty=0
+            )
+            
+            ai_response = response.choices[0].message.content.strip()
+            
+            return {
+                'response': ai_response,
+                'confidence': 0.9,  # High confidence for successful response
+                'model_used': model,
+                'tokens_used': response.usage.total_tokens,
+                'finish_reason': response.choices[0].finish_reason
+            }
+            
+        except Exception as e:
+            logger.error(f"OpenAI API error: {str(e)}")
+            return {
+                'response': 'দুঃখিত, একটি ত্রুটি হয়েছে। দয়া করে আবার চেষ্টা করুন।',
+                'confidence': 0.0,
+                'error': str(e)
+            }
+    
+    def generate_voice_response(
+        self, 
+        text: str, 
+        voice: str = "alloy",
+        model: str = "tts-1",
+        speed: float = 1.0
+    ) -> Dict[str, Any]:
+        """
+        Generate audio response using OpenAI TTS
+        
+        Args:
+            text: Text to convert to speech
+            voice: Voice type (alloy, echo, fable, onyx, nova, shimmer)
+            model: TTS model (tts-1 or tts-1-hd)
+            speed: Speech speed (0.25 to 4.0)
+            
+        Returns:
+            Dict containing audio file path and metadata
+        """
+        if not self.api_key:
+            return {
+                'audio_url': None,
+                'error': 'OpenAI API key not configured'
+            }
+        
+        try:
+            # Generate speech
+            response = openai.audio.speech.create(
+                model=model,
                 voice=voice,
                 input=text,
                 speed=speed
             )
-
-            # Get audio content
-            audio_data = b""
-            for chunk in response.iter_bytes():
-                audio_data += chunk
-
-            return audio_data
-
+            
+            # Save audio file
+            import tempfile
+            import os
+            
+            # Create media directory if it doesn't exist
+            media_dir = os.path.join(settings.MEDIA_ROOT, 'audio')
+            os.makedirs(media_dir, exist_ok=True)
+            
+            # Generate unique filename
+            import uuid
+            filename = f"tts_{uuid.uuid4().hex}.mp3"
+            file_path = os.path.join(media_dir, filename)
+            
+            # Write audio data to file
+            with open(file_path, 'wb') as f:
+                f.write(response.content)
+            
+            # Return relative URL
+            audio_url = f"{settings.MEDIA_URL}audio/{filename}"
+            
+            return {
+                'audio_url': audio_url,
+                'file_path': file_path,
+                'filename': filename,
+                'voice': voice,
+                'model': model,
+                'speed': speed
+            }
+            
         except Exception as e:
-            logger.error(f"Text-to-speech error: {str(e)}")
-            return None
-
-    def check_connectivity(self) -> bool:
-        """Check if OpenAI API is accessible"""
+            logger.error(f"OpenAI TTS error: {str(e)}")
+            return {
+                'audio_url': None,
+                'error': str(e)
+            }
+    
+    def detect_intent(self, message: str, intents: list) -> Dict[str, Any]:
+        """
+        Detect intent from user message
+        
+        Args:
+            message: User message
+            intents: List of available intents
+            
+        Returns:
+            Dict containing detected intent and confidence
+        """
         if not self.api_key:
-            return False
-
+            return {
+                'intent': None,
+                'confidence': 0.0,
+                'error': 'OpenAI API key not configured'
+            }
+        
         try:
-            # Simple test call
-            openai.Model.list()
-            return True
+            # Create intent detection prompt
+            intent_list = "\n".join([f"- {intent['name']}: {intent['description']}" for intent in intents])
+            
+            prompt = f"""
+            নিচের বার্তা থেকে সবচেয়ে উপযুক্ত ইনটেন্ট খুঁজে বের করুন:
+            
+            বার্তা: "{message}"
+            
+            উপলব্ধ ইনটেন্ট:
+            {intent_list}
+            
+            শুধুমাত্র ইনটেন্টের নাম দিন এবং আত্মবিশ্বাসের স্কোর (0-1) দিন।
+            """
+            
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=100
+            )
+            
+            result = response.choices[0].message.content.strip()
+            
+            # Parse response (simple parsing)
+            lines = result.split('\n')
+            intent_name = None
+            confidence = 0.5
+            
+            for line in lines:
+                if ':' in line:
+                    parts = line.split(':')
+                    if len(parts) == 2:
+                        intent_name = parts[0].strip()
+                        try:
+                            confidence = float(parts[1].strip())
+                        except ValueError:
+                            confidence = 0.5
+                        break
+            
+            return {
+                'intent': intent_name,
+                'confidence': confidence,
+                'raw_response': result
+            }
+            
         except Exception as e:
-            logger.error(f"OpenAI connectivity check failed: {str(e)}")
-            return False
+            logger.error(f"Intent detection error: {str(e)}")
+            return {
+                'intent': None,
+                'confidence': 0.0,
+                'error': str(e)
+            }
+    
+    def analyze_sentiment(self, message: str) -> Dict[str, Any]:
+        """
+        Analyze sentiment of user message
+        
+        Args:
+            message: User message to analyze
+            
+        Returns:
+            Dict containing sentiment analysis
+        """
+        if not self.api_key:
+            return {
+                'sentiment': 'neutral',
+                'confidence': 0.0,
+                'error': 'OpenAI API key not configured'
+            }
+        
+        try:
+            prompt = f"""
+            নিচের বার্তার আবেগ বিশ্লেষণ করুন:
+            
+            বার্তা: "{message}"
+            
+            আবেগ: positive, negative, neutral
+            আত্মবিশ্বাস: 0-1 স্কেলে
+            """
+            
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=50
+            )
+            
+            result = response.choices[0].message.content.strip()
+            
+            # Parse response
+            sentiment = 'neutral'
+            confidence = 0.5
+            
+            if 'positive' in result.lower():
+                sentiment = 'positive'
+            elif 'negative' in result.lower():
+                sentiment = 'negative'
+            
+            return {
+                'sentiment': sentiment,
+                'confidence': confidence,
+                'raw_response': result
+            }
+            
+        except Exception as e:
+            logger.error(f"Sentiment analysis error: {str(e)}")
+            return {
+                'sentiment': 'neutral',
+                'confidence': 0.0,
+                'error': str(e)
+            }
+
+
+# Global instance
+openai_service = OpenAIService()
