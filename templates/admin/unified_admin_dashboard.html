@@ -1397,6 +1397,13 @@ let users = [];
 let conversations = [];
 let aiAgents = [];
 
+// Get CSRF token
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+           document.querySelector('meta[name=csrf-token]')?.getAttribute('content') ||
+           '{{ csrf_token }}';
+}
+
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
     initializeSidebar();
@@ -1729,7 +1736,7 @@ async function addOrganization() {
             method: 'POST',
             body: formData,
             headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                'X-CSRFToken': getCSRFToken()
             }
         });
         
@@ -1753,7 +1760,7 @@ async function approveOrganization(orgId) {
             const response = await fetch(`/admin/api/approve-organization/${orgId}/`, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-CSRFToken': getCSRFToken(),
                     'Content-Type': 'application/json',
                 },
             });
@@ -1777,7 +1784,7 @@ async function rejectOrganization(orgId) {
             const response = await fetch(`/admin/api/reject-organization/${orgId}/`, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-CSRFToken': getCSRFToken(),
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({reason: reason})
@@ -1824,7 +1831,7 @@ async function sendTestMessage() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                'X-CSRFToken': getCSRFToken()
             },
             body: JSON.stringify({
                 content: message,
@@ -1875,7 +1882,7 @@ async function testChatAPI() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                'X-CSRFToken': getCSRFToken()
             },
             body: JSON.stringify({
                 content: 'Test message',
@@ -1905,7 +1912,7 @@ async function testVoiceAPI() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                'X-CSRFToken': getCSRFToken()
             },
             body: JSON.stringify({
                 phone_number: '+1234567890',
@@ -1934,7 +1941,7 @@ async function testSocialAPI() {
         const response = await fetch('/social/api/accounts/', {
             method: 'GET',
             headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                'X-CSRFToken': getCSRFToken()
             }
         });
         
