@@ -46,6 +46,7 @@ class OpenAIService:
         message: str, 
         conversation_history: list = None,
         system_prompt: str = None,
+        client_name: str = None,
         model: str = "gpt-4o-mini",
         temperature: float = 0.7,
         max_tokens: int = 1000
@@ -76,16 +77,17 @@ class OpenAIService:
             detected_language = self._detect_language(message)
             
             if not system_prompt:
+                client_context = f" for {client_name}" if client_name else ""
                 if detected_language == 'english':
-                    system_prompt = """
-                    You are a friendly and helpful AI assistant.
+                    system_prompt = f"""
+                    You are a friendly and helpful AI assistant{client_context}.
                     The user is asking in English, so you MUST respond in English only.
                     Do not use Bengali/Bangla language in your response.
                     Be polite, helpful, and respond naturally in English.
                     """
                 else:  # Bangla
-                    system_prompt = """
-                    আপনি একজন বন্ধুত্বপূর্ণ এবং সহায়ক AI সহকারী। 
+                    system_prompt = f"""
+                    আপনি একজন বন্ধুত্বপূর্ণ এবং সহায়ক AI সহকারী{client_context}।
                     ব্যবহারকারী বাংলায় প্রশ্ন করেছেন, তাই আপনাকে অবশ্যই বাংলায় উত্তর দিতে হবে।
                     ইংরেজি ভাষা ব্যবহার করবেন না।
                     বিনয়ী এবং সহায়ক হন এবং স্বাভাবিক বাংলায় উত্তর দিন।

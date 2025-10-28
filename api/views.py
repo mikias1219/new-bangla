@@ -60,11 +60,8 @@ def chat_send(request):
     ai_result = openai_service.generate_chat_response(
         message=message,
         conversation_history=conversation_history,
-        system_prompt=f"""
-        আপনি {client.name} এর জন্য কাজ করছেন।
-        সবসময় বাংলায় উত্তর দিন।
-        বন্ধুত্বপূর্ণ এবং সহায়ক হন।
-        """
+        system_prompt=None,  # Let the service detect language and set appropriate prompt
+        client_name=client.name
     )
     
     # Create conversation record
