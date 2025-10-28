@@ -10,6 +10,35 @@ from .models import User, Organization
 from .forms import UserRegistrationForm, UserProfileForm
 from core.models import Client, BanglaConversation, CallLog
 
+def client_dashboard_view(request):
+    """Client dashboard view for logged-in users"""
+    if not request.user.is_authenticated:
+        return redirect('accounts:login')
+    
+    # Get user-specific statistics
+    user_stats = {
+        'user_conversations': BanglaConversation.objects.filter(user_name=request.user.username).count(),
+        'user_voice_calls': CallLog.objects.filter(caller_name=request.user.username).count(),
+        'average_rating': BanglaConversation.objects.filter(
+            user_name=request.user.username,
+            satisfaction_rating__isnull=False
+        ).aggregate(avg_rating=Avg('satisfaction_rating'))['avg_rating'] or 0,
+    }
+    
+    # Recent conversations for this user
+    recent_conversations = BanglaConversation.objects.filter(
+        user_name=request.user.username
+    ).order_by('-created_at')[:10]
+    
+    context = {
+        'user_stats': user_stats,
+        'recent_conversations': recent_conversations,
+        'user': request.user,
+        'is_client_dashboard': True,
+    }
+    
+    return render(request, 'accounts/client_dashboard.html', context)
+
 def public_dashboard_view(request):
     """Public dashboard view showing platform statistics and features"""
     # Get public statistics
@@ -48,7 +77,7 @@ def login_view(request):
         if request.user.is_superuser:
             return redirect('bangla_admin_dashboard')
         else:
-            return redirect('accounts:public_dashboard')
+            return redirect('accounts:client_dashboard')
 
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -61,7 +90,7 @@ def login_view(request):
             if user.is_superuser:
                 next_url = request.GET.get('next', 'bangla_admin_dashboard')
             else:
-                next_url = request.GET.get('next', 'accounts:public_dashboard')
+                next_url = request.GET.get('next', 'accounts:client_dashboard')
             return redirect(next_url)
         else:
             messages.error(request, 'Invalid username or password.')
