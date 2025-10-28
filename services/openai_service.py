@@ -19,15 +19,24 @@ class OpenAIService:
     
     def _detect_language(self, text: str) -> str:
         """Detect if the text is in English or Bangla"""
-        # Simple language detection based on character sets
-        bangla_chars = set('অআইঈউঊঋএঐওঔকখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহড়ঢ়য়ৎ')
+        # More comprehensive Bangla character set
+        bangla_chars = set('অআইঈউঊঋএঐওঔকখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহড়ঢ়য়ৎািীুূৃেৈোৌংঃ')
         
         # Count Bangla characters
         bangla_count = sum(1 for char in text if char in bangla_chars)
         total_chars = len([c for c in text if c.isalpha()])
         
-        # If more than 30% of alphabetic characters are Bangla, consider it Bangla
-        if total_chars > 0 and (bangla_count / total_chars) > 0.3:
+        # If no alphabetic characters, default to English
+        if total_chars == 0:
+            return 'english'
+        
+        # If more than 20% of alphabetic characters are Bangla, consider it Bangla
+        bangla_ratio = bangla_count / total_chars
+        
+        # Debug logging
+        logger.info(f"Language detection: text='{text[:50]}...', bangla_count={bangla_count}, total_chars={total_chars}, ratio={bangla_ratio:.2f}")
+        
+        if bangla_ratio > 0.2:
             return 'bangla'
         else:
             return 'english'
@@ -70,16 +79,16 @@ class OpenAIService:
                 if detected_language == 'english':
                     system_prompt = """
                     You are a friendly and helpful AI assistant.
-                    Your job is to help users in English.
-                    Always respond in English unless the user asks for Bengali.
-                    Be polite and helpful.
+                    The user is asking in English, so you MUST respond in English only.
+                    Do not use Bengali/Bangla language in your response.
+                    Be polite, helpful, and respond naturally in English.
                     """
                 else:  # Bangla
                     system_prompt = """
                     আপনি একজন বন্ধুত্বপূর্ণ এবং সহায়ক AI সহকারী। 
-                    আপনার কাজ হল বাংলা ভাষায় ব্যবহারকারীদের সাহায্য করা।
-                    সবসময় বাংলায় উত্তর দিন, যদি না ব্যবহারকারী ইংরেজি চান।
-                    বিনয়ী এবং সহায়ক হন।
+                    ব্যবহারকারী বাংলায় প্রশ্ন করেছেন, তাই আপনাকে অবশ্যই বাংলায় উত্তর দিতে হবে।
+                    ইংরেজি ভাষা ব্যবহার করবেন না।
+                    বিনয়ী এবং সহায়ক হন এবং স্বাভাবিক বাংলায় উত্তর দিন।
                     """
             
             # Prepare messages
@@ -112,6 +121,7 @@ class OpenAIService:
             return {
                 'response': ai_response,
                 'confidence': 0.9,  # High confidence for successful response
+                'detected_language': detected_language,
                 'model_used': model,
                 'tokens_used': response.usage.total_tokens,
                 'finish_reason': response.choices[0].finish_reason
