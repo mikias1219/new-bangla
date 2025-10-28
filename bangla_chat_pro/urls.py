@@ -18,9 +18,32 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from bangla_chat_pro.admin_api import (
+    custom_admin_dashboard, dashboard_data_api, organizations_api, users_api,
+    conversations_api, ai_agents_api, approve_organization_api, reject_organization_api,
+    voice_sessions_api, voice_recordings_api, social_accounts_api, social_messages_api,
+    onboarding_steps_api, support_tickets_api
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    
+    # Custom Admin Dashboard
+    path('admin-dashboard/', custom_admin_dashboard, name='custom_admin_dashboard'),
+    path('admin/api/dashboard-data/', dashboard_data_api, name='dashboard_data_api'),
+    path('admin/api/organizations/', organizations_api, name='organizations_api'),
+    path('admin/api/users/', users_api, name='users_api'),
+    path('admin/api/conversations/', conversations_api, name='conversations_api'),
+    path('admin/api/ai-agents/', ai_agents_api, name='ai_agents_api'),
+    path('admin/api/approve-organization/<int:org_id>/', approve_organization_api, name='approve_organization_api'),
+    path('admin/api/reject-organization/<int:org_id>/', reject_organization_api, name='reject_organization_api'),
+    path('admin/api/voice-sessions/', voice_sessions_api, name='voice_sessions_api'),
+    path('admin/api/voice-recordings/', voice_recordings_api, name='voice_recordings_api'),
+    path('admin/api/social-accounts/', social_accounts_api, name='social_accounts_api'),
+    path('admin/api/social-messages/', social_messages_api, name='social_messages_api'),
+    path('admin/api/onboarding-steps/', onboarding_steps_api, name='onboarding_steps_api'),
+    path('admin/api/support-tickets/', support_tickets_api, name='support_tickets_api'),
+    
     path('api/', include('api.urls')),
     path('', include('dashboard.urls')),
     path('accounts/', include('accounts.urls')),
