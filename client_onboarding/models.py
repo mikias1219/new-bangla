@@ -1,7 +1,9 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from accounts.models import Organization
 from django.utils import timezone
+
+User = get_user_model()
 
 
 class ClientOnboardingStep(models.Model):
@@ -82,13 +84,13 @@ class ClientSupportTicket(models.Model):
         ('closed', 'Closed'),
     ]
     
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='support_tickets')
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='onboarding_tickets')
     title = models.CharField(max_length=200)
     description = models.TextField()
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
-    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tickets')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_tickets')
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_onboarding_tickets')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_onboarding_tickets')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
@@ -110,7 +112,7 @@ class ClientFeedback(models.Model):
         (5, 'Excellent'),
     ]
     
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='feedback')
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='onboarding_feedback')
     step_name = models.CharField(max_length=50)
     rating = models.IntegerField(choices=RATING_CHOICES)
     feedback_text = models.TextField(blank=True)
