@@ -344,11 +344,9 @@ def admin_api_dashboard_data(request):
     return JsonResponse(stats)
 
 
-@csrf_exempt
+@login_required
 def admin_api_test_chat(request):
     """Test chat functionality from admin dashboard"""
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
     if not request.user.is_superuser:
         return JsonResponse({'error': 'Access denied'}, status=403)
     
@@ -378,11 +376,9 @@ def admin_api_test_chat(request):
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 
-@csrf_exempt
+@login_required
 def admin_api_test_voice(request):
     """Test voice functionality from admin dashboard"""
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
     if not request.user.is_superuser:
         return JsonResponse({'error': 'Access denied'}, status=403)
     
@@ -406,10 +402,12 @@ def admin_api_test_voice(request):
     
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-# DRF API Views for Admin Testing
+# DRF API Views for Admin Testing (Requires authentication)
+from rest_framework.authentication import SessionAuthentication
+
 class AdminTestChatAPIView(APIView):
     """Test chat functionality from admin dashboard"""
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [TokenAuthentication, SessionAuthentication]
     permission_classes = [IsAuthenticated]
     
     def post(self, request):
@@ -440,7 +438,7 @@ class AdminTestChatAPIView(APIView):
 
 class AdminTestVoiceAPIView(APIView):
     """Test voice functionality from admin dashboard"""
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [TokenAuthentication, SessionAuthentication]
     permission_classes = [IsAuthenticated]
     
     def post(self, request):

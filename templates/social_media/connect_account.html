@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Connect {{ platform|title }} Account - BanglaChatPro{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fab fa-{{ platform }} me-2"></i>Connect {{ platform|title }} Account
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if platform == 'facebook' %}
+                            <div class="mb-3">
+                                <label for="page_id" class="form-label">Facebook Page ID *</label>
+                                <input type="text" class="form-control" id="page_id" name="page_id" required
+                                       placeholder="Enter your Facebook Page ID">
+                                <small class="form-text text-muted">Find your Page ID in Facebook Page Settings > Page Info</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="page_name" class="form-label">Page Name *</label>
+                                <input type="text" class="form-control" id="page_name" name="page_name" required
+                                       placeholder="Enter your Facebook Page Name">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="access_token" class="form-label">Page Access Token *</label>
+                                <input type="text" class="form-control" id="access_token" name="access_token" required
+                                       placeholder="Enter your Facebook Page Access Token">
+                                <small class="form-text text-muted">Generate from Facebook Graph API Explorer or App Dashboard</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="verify_token" class="form-label">Webhook Verify Token</label>
+                                <input type="text" class="form-control" id="verify_token" name="verify_token"
+                                       placeholder="Leave empty for auto-generation">
+                                <small class="form-text text-muted">Use this token when setting up webhook in Facebook App Dashboard</small>
+                            </div>
+                            
+                        {% elif platform == 'whatsapp' %}
+                            <div class="mb-3">
+                                <label for="phone_number_id" class="form-label">WhatsApp Phone Number ID *</label>
+                                <input type="text" class="form-control" id="phone_number_id" name="phone_number_id" required
+                                       placeholder="Enter WhatsApp Business Phone Number ID">
+                                <small class="form-text text-muted">Found in Meta Business Suite > WhatsApp > API Setup</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="account_name" class="form-label">Account Name *</label>
+                                <input type="text" class="form-control" id="account_name" name="account_name" required
+                                       placeholder="Enter WhatsApp Business Account Name">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="access_token" class="form-label">WhatsApp Access Token *</label>
+                                <input type="text" class="form-control" id="access_token" name="access_token" required
+                                       placeholder="Enter WhatsApp Business API Access Token">
+                                <small class="form-text text-muted">Generate from Meta Business Suite > System Users</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="verify_token" class="form-label">Webhook Verify Token</label>
+                                <input type="text" class="form-control" id="verify_token" name="verify_token"
+                                       placeholder="Leave empty for auto-generation">
+                                <small class="form-text text-muted">Use this token when setting up webhook in Meta Business Suite</small>
+                            </div>
+                            
+                        {% elif platform == 'instagram' %}
+                            <div class="mb-3">
+                                <label for="account_id" class="form-label">Instagram Business Account ID *</label>
+                                <input type="text" class="form-control" id="account_id" name="account_id" required
+                                       placeholder="Enter Instagram Business Account ID">
+                                <small class="form-text text-muted">Found in Instagram Business Settings > Account Information</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="account_name" class="form-label">Account Name *</label>
+                                <input type="text" class="form-control" id="account_name" name="account_name" required
+                                       placeholder="Enter Instagram Business Account Name">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="access_token" class="form-label">Instagram Access Token *</label>
+                                <input type="text" class="form-control" id="access_token" name="access_token" required
+                                       placeholder="Enter Instagram Graph API Access Token">
+                                <small class="form-text text-muted">Generate from Facebook App Dashboard > Instagram Graph API</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="verify_token" class="form-label">Webhook Verify Token</label>
+                                <input type="text" class="form-control" id="verify_token" name="verify_token"
+                                       placeholder="Leave empty for auto-generation">
+                                <small class="form-text text-muted">Use this token when setting up webhook in Facebook App Dashboard</small>
+                            </div>
+                            
+                        {% else %}
+                            <div class="alert alert-info">
+                                Platform connection form not available for {{ platform }}.
+                            </div>
+                        {% endif %}
+                        
+                        {% if ai_agents %}
+                        <div class="mb-3">
+                            <label for="ai_agent_id" class="form-label">Assign AI Agent (Optional)</label>
+                            <select class="form-select" id="ai_agent_id" name="ai_agent_id">
+                                <option value="">No AI Agent</option>
+                                {% for agent in ai_agents %}
+                                <option value="{{ agent.id }}">{{ agent.name }} - {{ agent.organization.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">Select an AI agent to handle automated responses</small>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'social_media:accounts_list' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-link me-2"></i>Connect Account
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="card-footer bg-light">
+                    <div class="alert alert-info mb-0">
+                        <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>Webhook Setup Instructions</h6>
+                        <p class="mb-2">After connecting, you'll receive a webhook URL. Configure it in your {{ platform|title }} app settings:</p>
+                        <ul class="mb-0">
+                            <li><strong>Webhook URL:</strong> Will be shown after connection</li>
+                            <li><strong>Verify Token:</strong> Use the token provided (or auto-generated)</li>
+                            <li><strong>Subscription Fields:</strong> messages, messaging_postbacks</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+</style>
+{% endblock %}
+

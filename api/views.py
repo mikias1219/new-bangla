@@ -1,10 +1,12 @@
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.models import Q
+from django.views.decorators.csrf import csrf_exempt
 import json
 
 from core.models import Client, BanglaConversation, CallLog, BanglaIntent
@@ -12,11 +14,13 @@ from services.openai_service import openai_service
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@authentication_classes([])  # No authentication required
+@permission_classes([AllowAny])  # Allow anonymous access for chat
 def chat_send(request):
     """
     Send a message and get AI response
     POST /api/chat/
+    Note: CSRF is exempt for API views in DRF by default
     """
     data = request.data
     

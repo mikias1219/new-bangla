@@ -1,6 +1,7 @@
 import openai
 import os
 from django.conf import settings
+from decouple import config
 from typing import Optional, Dict, Any
 import logging
 
@@ -11,9 +12,11 @@ class OpenAIService:
     """Service for OpenAI API integration"""
     
     def __init__(self):
-        self.api_key = os.getenv('OPENAI_API_KEY')
+        # Use config() from python-decouple to read from .env file
+        self.api_key = config('OPENAI_API_KEY', default='')
         if not self.api_key:
             logger.warning("OpenAI API key not found in environment variables")
+            self.client = None
         else:
             self.client = openai.OpenAI(api_key=self.api_key)
     

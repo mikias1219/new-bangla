@@ -14,10 +14,16 @@ from services.social_media_service import SocialMediaService
 def social_accounts_list(request):
     """List all social media accounts for the organization"""
     organization = request.user.organization
-    accounts = SocialMediaAccount.objects.filter(organization=organization)
+    accounts = SocialMediaAccount.objects.filter(organization=organization).order_by('-created_at')
+    
+    # Get recent messages (last 10)
+    recent_messages = SocialMediaMessage.objects.filter(
+        organization=organization
+    ).select_related('social_account').order_by('-received_at')[:10]
 
     context = {
         'accounts': accounts,
+        'recent_messages': recent_messages,
     }
 
     return render(request, 'social_media/accounts_list.html', context)
@@ -33,11 +39,29 @@ def connect_account(request, platform):
             page_id = request.POST.get('page_id')
             access_token = request.POST.get('access_token')
             page_name = request.POST.get('page_name')
+            verify_token = request.POST.get('verify_token') or f"fb_{organization.id}_{hash(page_id) % 10000}"
 
             try:
                 social_service = SocialMediaService(organization)
                 account = social_service.connect_facebook(page_id, access_token, page_name)
-                messages.success(request, f'Successfully connected Facebook page: {page_name}')
+                
+                # Save webhook secret for verification
+                account.webhook_secret = verify_token
+                account.webhook_url = request.build_absolute_uri(f'/social/webhook/facebook/{organization.id}/')
+                account.save()
+                
+                # Optionally assign AI agent
+                ai_agent_id = request.POST.get('ai_agent_id')
+                if ai_agent_id:
+                    from chat.models import AIAgent
+                    try:
+                        ai_agent = AIAgent.objects.get(id=ai_agent_id, organization=organization)
+                        account.ai_agent = ai_agent
+                        account.save()
+                    except AIAgent.DoesNotExist:
+                        pass
+                
+                messages.success(request, f'Successfully connected Facebook page: {page_name}. Webhook URL: {account.webhook_url}')
                 return redirect('social_media:accounts_list')
             except Exception as e:
                 messages.error(request, f'Failed to connect Facebook page: {str(e)}')
@@ -51,6 +75,18 @@ def connect_account(request, platform):
             try:
                 social_service = SocialMediaService(organization)
                 account = social_service.connect_twitter(account_id, access_token, access_token_secret, account_name)
+                
+                # Optionally assign AI agent
+                ai_agent_id = request.POST.get('ai_agent_id')
+                if ai_agent_id:
+                    from chat.models import AIAgent
+                    try:
+                        ai_agent = AIAgent.objects.get(id=ai_agent_id, organization=organization)
+                        account.ai_agent = ai_agent
+                        account.save()
+                    except AIAgent.DoesNotExist:
+                        pass
+                
                 messages.success(request, f'Successfully connected Twitter account: {account_name}')
                 return redirect('social_media:accounts_list')
             except Exception as e:
@@ -60,17 +96,70 @@ def connect_account(request, platform):
             account_id = request.POST.get('account_id')
             access_token = request.POST.get('access_token')
             account_name = request.POST.get('account_name')
+            verify_token = request.POST.get('verify_token') or f"ig_{organization.id}_{hash(account_id) % 10000}"
 
             try:
                 social_service = SocialMediaService(organization)
                 account = social_service.connect_instagram(account_id, access_token, account_name)
-                messages.success(request, f'Successfully connected Instagram account: {account_name}')
+                
+                # Save webhook secret and URL
+                account.webhook_secret = verify_token
+                account.webhook_url = request.build_absolute_uri(f'/social/webhook/instagram/{organization.id}/')
+                account.save()
+                
+                # Optionally assign AI agent
+                ai_agent_id = request.POST.get('ai_agent_id')
+                if ai_agent_id:
+                    from chat.models import AIAgent
+                    try:
+                        ai_agent = AIAgent.objects.get(id=ai_agent_id, organization=organization)
+                        account.ai_agent = ai_agent
+                        account.save()
+                    except AIAgent.DoesNotExist:
+                        pass
+                
+                messages.success(request, f'Successfully connected Instagram account: {account_name}. Webhook URL: {account.webhook_url}')
                 return redirect('social_media:accounts_list')
             except Exception as e:
                 messages.error(request, f'Failed to connect Instagram account: {str(e)}')
 
+        elif platform == 'whatsapp':
+            phone_number_id = request.POST.get('phone_number_id')
+            access_token = request.POST.get('access_token')
+            account_name = request.POST.get('account_name')
+            verify_token = request.POST.get('verify_token') or f"wa_{organization.id}_{hash(phone_number_id) % 10000}"
+
+            try:
+                social_service = SocialMediaService(organization)
+                account = social_service.connect_whatsapp(phone_number_id, access_token, account_name, verify_token)
+                
+                # Save webhook URL
+                account.webhook_url = request.build_absolute_uri(f'/social/webhook/whatsapp/{organization.id}/')
+                account.save()
+                
+                # Optionally assign AI agent
+                ai_agent_id = request.POST.get('ai_agent_id')
+                if ai_agent_id:
+                    from chat.models import AIAgent
+                    try:
+                        ai_agent = AIAgent.objects.get(id=ai_agent_id, organization=organization)
+                        account.ai_agent = ai_agent
+                        account.save()
+                    except AIAgent.DoesNotExist:
+                        pass
+                
+                messages.success(request, f'Successfully connected WhatsApp account: {account_name}. Webhook URL: {account.webhook_url}. Verify Token: {verify_token}')
+                return redirect('social_media:accounts_list')
+            except Exception as e:
+                messages.error(request, f'Failed to connect WhatsApp account: {str(e)}')
+
+    # Get available AI agents for this organization
+    from chat.models import AIAgent
+    ai_agents = AIAgent.objects.filter(organization=organization, status='active')
+
     context = {
         'platform': platform,
+        'ai_agents': ai_agents,
     }
 
     return render(request, 'social_media/connect_account.html', context)
@@ -78,18 +167,21 @@ def connect_account(request, platform):
 
 @login_required
 def account_detail(request, account_id):
-    """View social media account details and analytics"""
+    """View social media account details including webhook URL"""
     organization = request.user.organization
     account = get_object_or_404(SocialMediaAccount, id=account_id, organization=organization)
 
-    # Get account statistics
-    social_service = SocialMediaService(organization)
-    stats = social_service.get_account_stats(account)
+    # Get account statistics (if method exists)
+    try:
+        social_service = SocialMediaService(organization)
+        stats = social_service.get_account_stats(account) if hasattr(social_service, 'get_account_stats') else {}
+    except:
+        stats = {}
 
     # Recent messages
     recent_messages = SocialMediaMessage.objects.filter(
         social_account=account
-    ).order_by('-received_at')[:10]
+    ).order_by('-received_at')[:20]
 
     context = {
         'account': account,
@@ -167,32 +259,74 @@ def message_detail(request, message_id):
 
 # Webhook endpoints (no authentication required)
 @csrf_exempt
-@require_POST
 def facebook_webhook(request, organization_id):
-    """Handle Facebook webhooks"""
+    """Handle Facebook webhooks with proper verification"""
+    import json
+    import hashlib
+    import hmac
+    
     try:
         from accounts.models import Organization
         organization = Organization.objects.get(id=organization_id)
 
-        # Handle Facebook verification
+        # Handle Facebook webhook verification (GET request)
         if request.method == 'GET':
+            mode = request.GET.get('hub.mode')
             verify_token = request.GET.get('hub.verify_token')
             challenge = request.GET.get('hub.challenge')
 
-            # In production, verify the token properly
-            if verify_token == f"fb_verify_{organization_id}":
-                return HttpResponse(challenge)
+            if mode != 'subscribe':
+                return HttpResponse('Invalid mode', status=400)
+
+            # Get verification token from any Facebook account for this organization
+            from .models import SocialMediaAccount
+            facebook_account = SocialMediaAccount.objects.filter(
+                organization=organization,
+                platform='facebook',
+                is_active=True
+            ).first()
+
+            if facebook_account and facebook_account.webhook_secret == verify_token:
+                return HttpResponse(challenge, content_type='text/plain')
             else:
                 return HttpResponse('Verification failed', status=403)
 
-        # Handle webhook data
-        social_service = SocialMediaService(organization)
-        social_service.handle_facebook_webhook(request.POST)
+        # Handle webhook data (POST request)
+        if request.method == 'POST':
+            # Verify webhook signature (optional but recommended)
+            signature = request.META.get('HTTP_X_HUB_SIGNATURE_256', '')
+            if signature:
+                from django.conf import settings
+                app_secret = getattr(settings, 'FACEBOOK_APP_SECRET', '')
+                if app_secret:
+                    expected_signature = 'sha256=' + hmac.new(
+                        app_secret.encode('utf-8'),
+                        request.body,
+                        hashlib.sha256
+                    ).hexdigest()
+                    if not hmac.compare_digest(signature, expected_signature):
+                        return HttpResponse('Invalid signature', status=403)
 
-        return HttpResponse('OK')
+            # Parse JSON data
+            try:
+                data = json.loads(request.body) if request.body else {}
+            except json.JSONDecodeError:
+                return HttpResponse('Invalid JSON', status=400)
 
+            # Process webhook
+            social_service = SocialMediaService(organization)
+            social_service.handle_facebook_webhook(data)
+
+            return HttpResponse('OK', content_type='text/plain')
+
+        return HttpResponse('Method not allowed', status=405)
+
+    except Organization.DoesNotExist:
+        return HttpResponse('Organization not found', status=404)
     except Exception as e:
-        print(f"Facebook webhook error: {e}")
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Facebook webhook error: {e}", exc_info=True)
         return HttpResponse('Error', status=500)
 
 
@@ -215,21 +349,155 @@ def twitter_webhook(request, organization_id):
 
 
 @csrf_exempt
-@require_POST
 def instagram_webhook(request, organization_id):
-    """Handle Instagram webhooks"""
+    """Handle Instagram webhooks (uses Facebook Graph API)"""
+    import json
+    import hashlib
+    import hmac
+    
     try:
         from accounts.models import Organization
         organization = Organization.objects.get(id=organization_id)
 
-        # Instagram webhooks are similar to Facebook
-        social_service = SocialMediaService(organization)
-        social_service.handle_facebook_webhook(request.POST)  # Reuse Facebook handler
+        # Handle Instagram webhook verification (GET request)
+        if request.method == 'GET':
+            mode = request.GET.get('hub.mode')
+            verify_token = request.GET.get('hub.verify_token')
+            challenge = request.GET.get('hub.challenge')
 
-        return HttpResponse('OK')
+            if mode != 'subscribe':
+                return HttpResponse('Invalid mode', status=400)
 
+            # Get verification token from Instagram account
+            from .models import SocialMediaAccount
+            instagram_account = SocialMediaAccount.objects.filter(
+                organization=organization,
+                platform='instagram',
+                is_active=True
+            ).first()
+
+            if instagram_account and instagram_account.webhook_secret == verify_token:
+                return HttpResponse(challenge, content_type='text/plain')
+            else:
+                return HttpResponse('Verification failed', status=403)
+
+        # Handle webhook data (POST request)
+        if request.method == 'POST':
+            # Verify webhook signature
+            signature = request.META.get('HTTP_X_HUB_SIGNATURE_256', '')
+            if signature:
+                from django.conf import settings
+                app_secret = getattr(settings, 'FACEBOOK_APP_SECRET', '')
+                if app_secret:
+                    expected_signature = 'sha256=' + hmac.new(
+                        app_secret.encode('utf-8'),
+                        request.body,
+                        hashlib.sha256
+                    ).hexdigest()
+                    if not hmac.compare_digest(signature, expected_signature):
+                        return HttpResponse('Invalid signature', status=403)
+
+            # Parse JSON data
+            try:
+                data = json.loads(request.body) if request.body else {}
+            except json.JSONDecodeError:
+                return HttpResponse('Invalid JSON', status=400)
+
+            # Process webhook (Instagram uses same structure as Facebook)
+            social_service = SocialMediaService(organization)
+            social_service.handle_instagram_webhook(data)
+
+            return HttpResponse('OK', content_type='text/plain')
+
+        return HttpResponse('Method not allowed', status=405)
+
+    except Organization.DoesNotExist:
+        return HttpResponse('Organization not found', status=404)
     except Exception as e:
-        print(f"Instagram webhook error: {e}")
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Instagram webhook error: {e}", exc_info=True)
+        return HttpResponse('Error', status=500)
+
+@csrf_exempt
+def whatsapp_webhook(request, organization_id):
+    """Handle WhatsApp Business API webhooks with proper verification"""
+    import json
+    import hashlib
+    import hmac
+    
+    try:
+        from accounts.models import Organization
+        organization = Organization.objects.get(id=organization_id)
+
+        # Handle webhook verification (GET request)
+        if request.method == 'GET':
+            mode = request.GET.get('hub.mode')
+            token = request.GET.get('hub.verify_token')
+            challenge = request.GET.get('hub.challenge')
+
+            if mode != 'subscribe':
+                return HttpResponse('Invalid mode', status=400)
+
+            # Get the verify token from WhatsApp account
+            from .models import SocialMediaAccount
+            whatsapp_account = SocialMediaAccount.objects.filter(
+                organization=organization,
+                platform='whatsapp',
+                is_active=True
+            ).first()
+
+            if whatsapp_account and whatsapp_account.webhook_secret == token:
+                return HttpResponse(challenge, content_type='text/plain')
+            else:
+                return HttpResponse('Verification failed', status=403)
+
+        # Handle webhook data (POST request)
+        if request.method == 'POST':
+            # Verify webhook signature
+            signature = request.META.get('HTTP_X_HUB_SIGNATURE_256', '')
+            if signature:
+                from django.conf import settings
+                app_secret = getattr(settings, 'WHATSAPP_APP_SECRET', '')
+                if not app_secret:
+                    # Fallback to access token for verification
+                    whatsapp_account = SocialMediaAccount.objects.filter(
+                        organization=organization,
+                        platform='whatsapp',
+                        is_active=True
+                    ).first()
+                    if whatsapp_account:
+                        app_secret = whatsapp_account.access_token[:32]  # Use first 32 chars
+                
+                if app_secret:
+                    expected_signature = 'sha256=' + hmac.new(
+                        app_secret.encode('utf-8'),
+                        request.body,
+                        hashlib.sha256
+                    ).hexdigest()
+                    if not hmac.compare_digest(signature, expected_signature):
+                        return HttpResponse('Invalid signature', status=403)
+
+            # Parse JSON data
+            try:
+                data = json.loads(request.body) if request.body else {}
+            except json.JSONDecodeError:
+                return HttpResponse('Invalid JSON', status=400)
+
+            # Process webhook
+            social_service = SocialMediaService(organization)
+            social_service.handle_whatsapp_webhook(data)
+
+            return HttpResponse('OK', content_type='text/plain')
+
+        return HttpResponse('Method not allowed', status=405)
+
+    except Organization.DoesNotExist:
+        return HttpResponse('Organization not found', status=404)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"WhatsApp webhook error: {e}", exc_info=True)
         return HttpResponse('Error', status=500)
 
 

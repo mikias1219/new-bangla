@@ -1,6 +1,8 @@
 from django.urls import path, include
 from . import views
 
+app_name = 'chat'
+
 urlpatterns = [
     # Main BanglaChatPro Chat Interface
     path('', views.bangla_chat_view, name='bangla_chat'),

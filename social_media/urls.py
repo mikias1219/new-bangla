@@ -8,6 +8,7 @@ urlpatterns = [
     path('webhook/facebook/<int:organization_id>/', views.facebook_webhook, name='facebook_webhook'),
     path('webhook/twitter/<int:organization_id>/', views.twitter_webhook, name='twitter_webhook'),
     path('webhook/instagram/<int:organization_id>/', views.instagram_webhook, name='instagram_webhook'),
+    path('webhook/whatsapp/<int:organization_id>/', views.whatsapp_webhook, name='whatsapp_webhook'),
 
     # Social media account management
     path('accounts/', views.social_accounts_list, name='accounts_list'),

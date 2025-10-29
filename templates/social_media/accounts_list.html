@@ -31,122 +31,86 @@
                 </h5>
             </div>
             <div class="card-body p-4">
-                <div class="row g-3" id="connectedAccounts">
-                    <!-- Facebook Account -->
+                {% if accounts %}
+                <div class="row g-3">
+                    {% for account in accounts %}
                     <div class="col-md-6">
                         <div class="social-account-card">
                             <div class="d-flex align-items-center">
+                                {% if account.platform == 'facebook' %}
                                 <div class="social-icon bg-primary">
                                     <i class="fab fa-facebook-f"></i>
                                 </div>
-                                <div class="ms-3 flex-grow-1">
-                                    <h6 class="mb-1">Facebook Page</h6>
-                                    <small class="text-muted">@yourbusinesspage</small>
-                                    <div class="mt-1">
-                                        <span class="badge bg-success">Connected</span>
-                                    </div>
-                                </div>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                        <i class="fas fa-ellipsis-v"></i>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="fas fa-chart-bar me-2"></i>Analytics</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-unlink me-2"></i>Disconnect</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Instagram Account -->
-                    <div class="col-md-6">
-                        <div class="social-account-card">
-                            <div class="d-flex align-items-center">
+                                {% elif account.platform == 'instagram' %}
                                 <div class="social-icon bg-gradient-instagram">
                                     <i class="fab fa-instagram"></i>
                                 </div>
-                                <div class="ms-3 flex-grow-1">
-                                    <h6 class="mb-1">Instagram Business</h6>
-                                    <small class="text-muted">@yourbusiness</small>
-                                    <div class="mt-1">
-                                        <span class="badge bg-success">Connected</span>
-                                    </div>
-                                </div>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                        <i class="fas fa-ellipsis-v"></i>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="fas fa-chart-bar me-2"></i>Analytics</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-unlink me-2"></i>Disconnect</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- WhatsApp Business -->
-                    <div class="col-md-6">
-                        <div class="social-account-card">
-                            <div class="d-flex align-items-center">
+                                {% elif account.platform == 'whatsapp' %}
                                 <div class="social-icon bg-success">
                                     <i class="fab fa-whatsapp"></i>
                                 </div>
-                                <div class="ms-3 flex-grow-1">
-                                    <h6 class="mb-1">WhatsApp Business</h6>
-                                    <small class="text-muted">+1234567890</small>
-                                    <div class="mt-1">
-                                        <span class="badge bg-success">Connected</span>
-                                    </div>
-                                </div>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                        <i class="fas fa-ellipsis-v"></i>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="fas fa-chart-bar me-2"></i>Analytics</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-unlink me-2"></i>Disconnect</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Twitter Account -->
-                    <div class="col-md-6">
-                        <div class="social-account-card">
-                            <div class="d-flex align-items-center">
+                                {% else %}
                                 <div class="social-icon bg-info">
-                                    <i class="fab fa-twitter"></i>
+                                    <i class="fas fa-share-alt"></i>
                                 </div>
+                                {% endif %}
                                 <div class="ms-3 flex-grow-1">
-                                    <h6 class="mb-1">Twitter Business</h6>
-                                    <small class="text-muted">@yourbusiness</small>
+                                    <h6 class="mb-1">{{ account.display_name|default:account.account_name }}</h6>
+                                    <small class="text-muted">{{ account.account_name }}</small>
                                     <div class="mt-1">
-                                        <span class="badge bg-warning">Pending</span>
+                                        {% if account.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                        {% if account.ai_agent %}
+                                        <span class="badge bg-info ms-1">AI Enabled</span>
+                                        {% endif %}
+                                        {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
                                     </div>
+                                    {% if account.webhook_url %}
+                                    <div class="mt-2">
+                                        <small class="text-muted d-block">
+                                            <i class="fas fa-link me-1"></i>Webhook: 
+                                            <code class="small">{{ account.webhook_url|truncatechars:40 }}</code>
+                                        </small>
+                                    </div>
+                                    {% endif %}
                                 </div>
                                 <div class="dropdown">
                                     <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                         <i class="fas fa-ellipsis-v"></i>
                                     </button>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i>Retry Connection</a></li>
+                                        <li><a class="dropdown-item" href="{% url 'social_media:account_detail' account.id %}"><i class="fas fa-eye me-2"></i>View Details</a></li>
+                                        {% if account.webhook_url %}
+                                        <li><a class="dropdown-item" href="#" onclick="copyWebhookUrl('{{ account.webhook_url }}', '{{ account.webhook_secret }}'); return false;"><i class="fas fa-copy me-2"></i>Copy Webhook URL</a></li>
+                                        {% endif %}
                                         <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-unlink me-2"></i>Remove</a></li>
+                                        <li>
+                                            <form method="post" action="{% url 'social_media:disconnect_account' account.id %}" style="display:inline;">
+                                                {% csrf_token %}
+                                                <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Are you sure you want to disconnect this account?');">
+                                                    <i class="fas fa-unlink me-2"></i>Disconnect
+                                                </button>
+                                            </form>
+                                        </li>
                                     </ul>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-share-alt fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Social Media Accounts Connected</h5>
+                    <p class="text-muted">Connect your first social media account to start receiving messages</p>
+                    <a href="{% url 'social_media:connect_account' 'facebook' %}" class="btn btn-primary mt-3">
+                        <i class="fas fa-plus me-2"></i>Connect Account
+                    </a>
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -158,76 +122,58 @@
                 </h5>
             </div>
             <div class="card-body p-0">
+                {% if accounts %}
                 <div class="message-list">
+                    {% for message in recent_messages|default:"" %}
                     <div class="message-item">
-                        <div class="d-flex align-items-start p-3 border-bottom">
+                        <div class="d-flex align-items-start p-3 {% if not forloop.last %}border-bottom{% endif %}">
+                            {% if message.social_account.platform == 'facebook' %}
                             <div class="social-icon-sm bg-primary me-3">
                                 <i class="fab fa-facebook-f"></i>
                             </div>
-                            <div class="flex-grow-1">
-                                <div class="d-flex justify-content-between align-items-start mb-1">
-                                    <h6 class="mb-0">John Doe</h6>
-                                    <small class="text-muted">2 min ago</small>
-                                </div>
-                                <p class="mb-2">Hi, I'm interested in your services. Can you tell me more about pricing?</p>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-reply me-1"></i>Reply
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-success">
-                                        <i class="fas fa-robot me-1"></i>AI Reply
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="message-item">
-                        <div class="d-flex align-items-start p-3 border-bottom">
+                            {% elif message.social_account.platform == 'instagram' %}
                             <div class="social-icon-sm bg-gradient-instagram me-3">
                                 <i class="fab fa-instagram"></i>
                             </div>
-                            <div class="flex-grow-1">
-                                <div class="d-flex justify-content-between align-items-start mb-1">
-                                    <h6 class="mb-0">Sarah Wilson</h6>
-                                    <small class="text-muted">5 min ago</small>
-                                </div>
-                                <p class="mb-2">Love your products! When will the new collection be available?</p>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-reply me-1"></i>Reply
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-success">
-                                        <i class="fas fa-robot me-1"></i>AI Reply
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="message-item">
-                        <div class="d-flex align-items-start p-3">
+                            {% elif message.social_account.platform == 'whatsapp' %}
                             <div class="social-icon-sm bg-success me-3">
                                 <i class="fab fa-whatsapp"></i>
                             </div>
+                            {% else %}
+                            <div class="social-icon-sm bg-info me-3">
+                                <i class="fas fa-share-alt"></i>
+                            </div>
+                            {% endif %}
                             <div class="flex-grow-1">
                                 <div class="d-flex justify-content-between align-items-start mb-1">
-                                    <h6 class="mb-0">Mike Johnson</h6>
-                                    <small class="text-muted">10 min ago</small>
+                                    <h6 class="mb-0">{{ message.sender_name|default:"Unknown" }}</h6>
+                                    <small class="text-muted">{{ message.received_at|timesince }} ago</small>
                                 </div>
-                                <p class="mb-2">I need help with my order. Order #12345</p>
+                                <p class="mb-2">{{ message.content|truncatewords:20 }}</p>
                                 <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-reply me-1"></i>Reply
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-success">
-                                        <i class="fas fa-robot me-1"></i>AI Reply
-                                    </button>
+                                    <a href="{% url 'social_media:message_detail' message.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i>View
+                                    </a>
+                                    {% if message.ai_processed %}
+                                    <span class="badge bg-success">AI Processed</span>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
                     </div>
+                    {% empty %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-comments fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No messages yet. Messages will appear here once you receive them.</p>
+                    </div>
+                    {% endfor %}
                 </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-comments fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">Connect social media accounts to start receiving messages.</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -279,32 +225,48 @@
                 </h5>
             </div>
             <div class="card-body">
+                {% with total_messages=accounts|length %}
                 <div class="row g-3">
                     <div class="col-6">
                         <div class="stat-card">
-                            <div class="stat-number text-primary">1,247</div>
-                            <div class="stat-label">Total Messages</div>
+                            <div class="stat-number text-primary">{{ total_messages|length }}</div>
+                            <div class="stat-label">Connected Accounts</div>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="stat-card">
-                            <div class="stat-number text-success">98.5%</div>
-                            <div class="stat-label">Response Rate</div>
+                            <div class="stat-number text-success">
+                                {% if accounts %}
+                                    {% for account in accounts %}
+                                        {% if account.is_active %}{{ forloop.counter }}{% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </div>
+                            <div class="stat-label">Active Accounts</div>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="stat-card">
-                            <div class="stat-number text-warning">2.3m</div>
-                            <div class="stat-label">Avg Response Time</div>
+                            <div class="stat-number text-info">
+                                {% for account in accounts %}
+                                    {% if account.ai_agent %}{{ forloop.counter }}{% endif %}
+                                {% endfor %}
+                            </div>
+                            <div class="stat-label">AI Enabled</div>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="stat-card">
-                            <div class="stat-number text-info">4.8</div>
-                            <div class="stat-label">Satisfaction Score</div>
+                            <div class="stat-number text-warning">
+                                {% if recent_messages %}{{ recent_messages|length }}{% else %}0{% endif %}
+                            </div>
+                            <div class="stat-label">Recent Messages</div>
                         </div>
                     </div>
                 </div>
+                {% endwith %}
             </div>
         </div>
 
@@ -493,34 +455,24 @@
     background-color: rgba(0, 0, 0, 0.02);
 }
 </style>
-{% endblock %}
+{% endblock content %}
 
 {% block extra_scripts %}
 <script>
 // Connect platform function
 function connectPlatform(platform) {
-    const platformNames = {
-        'facebook': 'Facebook',
-        'instagram': 'Instagram',
-        'whatsapp': 'WhatsApp',
-        'twitter': 'Twitter'
-    };
+    // Redirect to connect page
+    window.location.href = `/social/accounts/connect/${platform}/`;
+}
 
-    if (confirm(`Connect ${platformNames[platform]} account?`)) {
-        // Simulate connection process
-        const modal = bootstrap.Modal.getInstance(document.getElementById('connectModal'));
-        modal.hide();
-        
-        // Show loading state
-        showToast(`Connecting to ${platformNames[platform]}...`, 'info');
-        
-        // Simulate API call
-        setTimeout(() => {
-            showToast(`Successfully connected to ${platformNames[platform]}!`, 'success');
-            // Refresh the page or update UI
-            location.reload();
-        }, 2000);
-    }
+// Copy webhook URL to clipboard
+function copyWebhookUrl(url, token) {
+    const text = `Webhook URL: ${url}\nVerify Token: ${token}`;
+    navigator.clipboard.writeText(text).then(function() {
+        showToast('Webhook URL and token copied to clipboard!', 'success');
+    }, function(err) {
+        showToast('Failed to copy. URL: ' + url, 'warning');
+    });
 }
 
 // Quick action functions
@@ -601,4 +553,4 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Social Media Integration initialized');
 });
 </script>
-{% endblock %}
+{% endblock extra_scripts %}
