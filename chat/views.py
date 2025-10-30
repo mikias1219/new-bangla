@@ -3,11 +3,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.clickjacking import xframe_options_exempt
 from django.utils import timezone
 from .models import Conversation, Message, AIAgent, Intent, Feedback
 from core.models import Client
 import json
 
+@xframe_options_exempt
 def bangla_chat_view(request):
     """Main BanglaChatPro chat interface"""
     clients = Client.objects.filter(is_active=True)

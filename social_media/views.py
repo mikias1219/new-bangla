@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.clickjacking import xframe_options_exempt
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -11,6 +12,7 @@ from services.social_media_service import SocialMediaService
 
 
 @login_required
+@xframe_options_exempt
 def social_accounts_list(request):
     """List all social media accounts for the organization"""
     organization = request.user.organization
@@ -175,7 +177,7 @@ def account_detail(request, account_id):
     try:
         social_service = SocialMediaService(organization)
         stats = social_service.get_account_stats(account) if hasattr(social_service, 'get_account_stats') else {}
-    except:
+    except Exception:
         stats = {}
 
     # Recent messages

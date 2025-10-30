@@ -4,17 +4,27 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.forms import PasswordChangeForm
 from django.http import JsonResponse
+from django.views.decorators.clickjacking import xframe_options_exempt
 from django.db.models import Avg
 from django.utils import timezone
 from .models import User, Organization
 from .forms import UserRegistrationForm, UserProfileForm
 from core.models import Client, BanglaConversation, CallLog
+from social_media.models import SocialMediaAccount
 
 def client_dashboard_view(request):
     """Client dashboard view for logged-in users"""
     if not request.user.is_authenticated:
         return redirect('accounts:login')
     
+    # Organization approval & features
+    organization = getattr(request.user, 'organization', None)
+    approval_status = getattr(organization, 'approval_status', 'pending') if organization else 'pending'
+    is_approved = approval_status == 'approved'
+    # Feature toggles (can extend with subscription/plan in future)
+    is_chat_enabled = is_approved
+    is_voice_enabled = is_approved
+
     # Get user-specific statistics
     user_stats = {
         'user_conversations': BanglaConversation.objects.filter(user_name=request.user.username).count(),
@@ -25,6 +35,18 @@ def client_dashboard_view(request):
         ).aggregate(avg_rating=Avg('satisfaction_rating'))['avg_rating'] or 0,
     }
     
+    # Social integration status for this organization
+    social_status = {
+        'facebook': False,
+        'whatsapp': False,
+        'instagram': False,
+    }
+    if organization:
+        connected = SocialMediaAccount.objects.filter(organization=organization, is_active=True)
+        for acc in connected:
+            if acc.platform in social_status:
+                social_status[acc.platform] = True
+
     # Recent conversations for this user
     recent_conversations = BanglaConversation.objects.filter(
         user_name=request.user.username
@@ -35,6 +57,11 @@ def client_dashboard_view(request):
         'recent_conversations': recent_conversations,
         'user': request.user,
         'is_client_dashboard': True,
+        'is_approved': is_approved,
+        'approval_status': approval_status,
+        'is_chat_enabled': is_chat_enabled,
+        'is_voice_enabled': is_voice_enabled,
+        'social_status': social_status,
     }
     
     return render(request, 'accounts/client_dashboard.html', context)
@@ -138,6 +165,7 @@ def register_view(request):
     return render(request, 'accounts/register.html', {'form': form})
 
 @login_required
+@xframe_options_exempt
 def profile_view(request):
     """User profile view"""
     if request.method == 'POST':

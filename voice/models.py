@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
+from datetime import timedelta
 
 class VoiceRecording(models.Model):
     """Voice recording for processing"""
@@ -89,7 +90,7 @@ class VoiceSession(models.Model):
 
     # Statistics
     total_recordings = models.PositiveIntegerField(default=0)
-    total_duration = models.DurationField(default=0)
+    total_duration = models.DurationField(default=timedelta())
     average_confidence = models.FloatField(default=0.0)
 
     # Timestamps
@@ -172,7 +173,7 @@ class VoiceAnalytics(models.Model):
     average_language_detection_confidence = models.FloatField(default=0.0)
 
     # Usage metrics
-    total_audio_duration = models.DurationField(default=0)  # Total duration of all recordings
+    total_audio_duration = models.DurationField(default=timedelta())  # Total duration of all recordings
     average_session_duration = models.DurationField(null=True, blank=True)
 
     # Error metrics

@@ -6,19 +6,35 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from .models import VoiceRecording, VoiceSession, SpeechSynthesis
+from chat.models import Conversation
 from services.twilio_service import TwilioService
 from accounts.models import Organization
+from django.views.decorators.clickjacking import xframe_options_exempt
 import json
+from datetime import timedelta
 
 @login_required
+@xframe_options_exempt
 def voice_interface(request):
     """Voice interface view"""
-    # Get active voice session or create new one
-    session, created = VoiceSession.objects.get_or_create(
+    # Ensure there is an active conversation for this user to link with the voice session
+    organization = request.user.organization
+    if not organization:
+        messages.error(request, 'No organization associated with your account.')
+        return redirect('accounts:client_dashboard') if hasattr(messages, 'error') else render(request, 'voice/interface.html')
+
+    conversation, _ = Conversation.objects.get_or_create(
         user=request.user,
+        organization=organization,
         status='active',
+        defaults={'title': f"Voice Conversation - {request.user.username}"}
+    )
+
+    # Get active voice session for this conversation or create one
+    session, created = VoiceSession.objects.get_or_create(
+        conversation=conversation,
         defaults={
-            'conversation': None,  # Will be set when conversation starts
+            'user': request.user,
             'session_id': f"voice_{request.user.id}_{timezone.now().timestamp()}"
         }
     )
@@ -98,7 +114,7 @@ def synthesize_speech(request):
 
             # Mock speech synthesis (in production, this would call TTS service)
             synthesis.status = 'completed'
-            synthesis.duration = len(text) * 0.1  # Rough estimate
+            synthesis.duration = timedelta(seconds=len(text) * 0.1)  # Rough estimate
             synthesis.save()
 
             return JsonResponse({

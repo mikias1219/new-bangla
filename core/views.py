@@ -26,13 +26,48 @@ from client_onboarding.models import ClientOnboardingStep, ClientSetupGuide, Cli
 from services.openai_service import openai_service
 
 
+def _get_admin_permissions(user):
+    """Return role label and permissions for the given user based on AdminProfile or superuser."""
+    role_label = 'User'
+    perms = {
+        'can_manage_clients': False,
+        'can_manage_intents': False,
+        'can_view_analytics': False,
+        'can_handle_escalations': False,
+    }
+
+    if not user.is_authenticated:
+        return role_label, perms
+
+    if user.is_superuser:
+        role_label = 'Super Admin'
+        for k in list(perms.keys()):
+            perms[k] = True
+        return role_label, perms
+
+    profile = AdminProfile.objects.filter(user=user).first()
+    if profile:
+        role_map = {
+            'super_admin': 'Super Admin',
+            'admin': 'Admin',
+            'moderator': 'Moderator',
+        }
+        role_label = role_map.get(profile.role, 'User')
+        perms['can_manage_clients'] = bool(profile.can_manage_clients)
+        perms['can_manage_intents'] = bool(profile.can_manage_intents)
+        perms['can_view_analytics'] = bool(profile.can_view_analytics)
+        perms['can_handle_escalations'] = bool(profile.can_handle_escalations)
+    return role_label, perms
+
+
 def bangla_admin_dashboard(request):
-    """Unified admin dashboard with all super admin features"""
+    """Unified admin dashboard with role-based access using AdminProfile."""
     if not request.user.is_authenticated:
         return redirect('admin:login')
     
-    if not request.user.is_superuser:
-        messages.error(request, 'Access denied. Superuser privileges required.')
+    role_label, perms = _get_admin_permissions(request.user)
+    if role_label not in ('Super Admin', 'Admin', 'Moderator'):
+        messages.error(request, 'Access denied. Administrative privileges required.')
         return redirect('admin:login')
     
     # Get dashboard statistics
@@ -68,6 +103,8 @@ def bangla_admin_dashboard(request):
         'recent_users': recent_users,
         'system_settings': system_settings,
         'user': request.user,
+        'role_label': role_label,
+        'permissions': perms,
     }
     
     return render(request, 'admin/bangla_admin_dashboard.html', context)
@@ -327,7 +364,8 @@ class BanglaHandoffAPIView(View):
 @login_required
 def admin_api_dashboard_data(request):
     """Get dashboard data for admin"""
-    if not request.user.is_superuser:
+    role_label, perms = _get_admin_permissions(request.user)
+    if not perms.get('can_view_analytics'):
         return JsonResponse({'error': 'Access denied'}, status=403)
     
     # Get statistics
@@ -345,9 +383,32 @@ def admin_api_dashboard_data(request):
 
 
 @login_required
+def admin_api_analytics_series(request):
+    """Time series for dashboard charts (simple aggregate)."""
+    role_label, perms = _get_admin_permissions(request.user)
+    if not perms.get('can_view_analytics'):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    # Simple daily aggregates for last 7 days
+    from django.utils import timezone
+    from datetime import timedelta
+    today = timezone.now().date()
+    days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+    series = []
+    for d in days:
+        series.append({
+            'date': d.isoformat(),
+            'chats': BanglaConversation.objects.filter(created_at__date=d).count(),
+            'calls': CallLog.objects.filter(timestamp__date=d).count(),
+            'escalations': BanglaConversation.objects.filter(created_at__date=d, is_escalated=True).count(),
+        })
+    return JsonResponse({'series': series})
+
+
+@login_required
 def admin_api_test_chat(request):
     """Test chat functionality from admin dashboard"""
-    if not request.user.is_superuser:
+    role_label, perms = _get_admin_permissions(request.user)
+    if not perms.get('can_manage_intents'):
         return JsonResponse({'error': 'Access denied'}, status=403)
     
     if request.method == 'POST':
@@ -379,7 +440,8 @@ def admin_api_test_chat(request):
 @login_required
 def admin_api_test_voice(request):
     """Test voice functionality from admin dashboard"""
-    if not request.user.is_superuser:
+    role_label, perms = _get_admin_permissions(request.user)
+    if not perms.get('can_manage_intents'):
         return JsonResponse({'error': 'Access denied'}, status=403)
     
     if request.method == 'POST':
@@ -411,7 +473,8 @@ class AdminTestChatAPIView(APIView):
     permission_classes = [IsAuthenticated]
     
     def post(self, request):
-        if not request.user.is_superuser:
+        role_label, perms = _get_admin_permissions(request.user)
+        if not perms.get('can_manage_intents'):
             return Response({'error': 'Access denied'}, status=403)
         
         message = request.data.get('message', 'Hello')
@@ -442,7 +505,8 @@ class AdminTestVoiceAPIView(APIView):
     permission_classes = [IsAuthenticated]
     
     def post(self, request):
-        if not request.user.is_superuser:
+        role_label, perms = _get_admin_permissions(request.user)
+        if not perms.get('can_manage_intents'):
             return Response({'error': 'Access denied'}, status=403)
         
         text = request.data.get('text', 'Hello, this is a test.')
